@@ -1,34 +1,25 @@
+import {sealed} from './lib/sealed';
 import Redis = require('ioredis')
 var EventEmitter = require('events')
 import shortid = require('shortid')
 
+type Ref = [string, string];
 interface IActor {
+    pid: Ref;
     onmessage(message:any);
     emit(eventName:string, ...args:any[]);
     onexit();
-    pid();
 }
 
-type Ref = [string, string];
+
 type IActorCtor = (new (...args: any[]) => IActor);
-class Directory {
-    private redis: IORedis.Redis;
-    
-    constructor(){
-        this.redis = new Redis();
-    }
-    
-    nodes():PromiseLike<string[]> {
-        return this.redis.smembers("nodes");
-    }
-}
 
 // Base Actor Model 
 class Actor implements IActor{
 //   private _id; // the unique id
 //   private _dispatcher;
 //   private _registry;
-    private _pid:Ref;
+    private _pid:string;
 
   
   onmessage (message:any){
@@ -42,8 +33,8 @@ class Actor implements IActor{
   emit(eventName:string, ...args:any[]){
       
   }
-  
-  pid () {
+  // @sealed
+  public get pid ():string {
 	  return this._pid;
   }
   
@@ -78,6 +69,9 @@ class Actor implements IActor{
   
   static init(cb?:(...args:any[])=>any){
       this.dispatcher = new Dispatcher(shortid.generate());
+      process.on('beforExit', (code) => {
+        this.dispatcher.dispose();
+      });
       if (cb) {
           cb(this.dispatcher);
       }
@@ -86,14 +80,13 @@ class Actor implements IActor{
 
 class Dispatcher extends EventEmitter{
     private redis:IORedis.Redis;
-    private processId:string;
+    public processId:string;
     private mailbox:IORedis.Redis;
     
-    constructor(processId){
+    constructor(directory:Directory){
         super();
         this.redis = new Redis();
-        this.processId = processId;
-        this.redis.sadd("nodes", this.processId);
+        this.processId = directory.register();
         this.mailbox = new Redis();
         this.receive();
     }

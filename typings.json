@@ -1,7 +1,9 @@
 {
   "ambientDependencies": {
+    "core-decorators": "registry:dt/core-decorators#0.10.0+20160316155526",
     "ioredis": "registry:dt/ioredis#0.0.0+20160412133314",
     "node": "registry:dt/node#4.0.0+20160423143914",
+    "node_zeromq/zmq": "registry:dt/node_zeromq/zmq#0.0.0+20160316155526",
     "shortid": "registry:dt/shortid#0.0.0+20160316155526"
   }
 }

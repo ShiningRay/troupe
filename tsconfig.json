@@ -6,6 +6,8 @@
         "noImplicitAny": false,
         "removeComments": true,
         "sourceMap": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
         "outDir": "built/"
     },
     "exclude": [
