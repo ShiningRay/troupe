@@ -1,0 +1,7 @@
+{
+  "ambientDependencies": {
+    "ioredis": "registry:dt/ioredis#0.0.0+20160412133314",
+    "node": "registry:dt/node#4.0.0+20160423143914",
+    "shortid": "registry:dt/shortid#0.0.0+20160316155526"
+  }
+}
