@@ -9,6 +9,7 @@
   "author": "ShiningRay",
   "license": "ISC",
   "dependencies": {
+    "bluebird": "^3.3.5",
     "core-decorators": "^0.12.2",
     "ioredis": "^1.15.1",
     "reflect-metadata": "^0.1.3",
