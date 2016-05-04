@@ -40,7 +40,7 @@ describe('core', function () {
             expect(callback.called).to.be.true;
         })
     })
-    
+
     describe('#send', function () {
         let actor: DumbActor = core.start(DumbActor);
         it("should call messages", function () {
@@ -49,6 +49,18 @@ describe('core', function () {
             core.send(actor.pid, "message")
             expect(actor.messages).not.to.be.empty;
             expect(actor.messages[0]).to.be.eq("message")
+        });
+    });
+    describe('#toRef', function () {
+        it("should convert actor id to ref", function () {
+            let ref = core.toRef("test");
+            expect(ref.node).not.to.be.undefined;
+            expect(ref.id).to.eq('test')
+
+            actor = core.start(DumbActor);
+            ref = core.toRef(actor)
+            expect(ref.node).not.to.be.undefined;
+            expect(ref.id).to.eq(actor.pid);
         });
     });
 })

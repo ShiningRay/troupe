@@ -1,48 +1,98 @@
 import * as Redis from 'ioredis';
-import {IActor, resolve} from './core'
+import {Pid, IActor, Ref, resolve, toRef} from './core'
 import {Node, World} from './cluster'
 import {ActorProxy} from './proxy'
 
 var subscriber: IORedis.Redis;
+var publisher: IORedis.Redis;
 
+function refToChannel(ref: Ref) {
+    return `${ref.node}#${ref.id}`;
+}
+
+function eventToChannel(ref: Ref, eventName: string) {
+    return `${ref.node}#${ref.id}.${eventName}`;
+}
+/**
+ * TODO: maybe we can user rabbitmq or other mq as event router backend
+ */
+export interface IEventRouter {
+    subscribe(actor: Pid, eventName: string, cb: Function);
+    publish(actor: Pid, eventName: string, args: any[]);
+}
 /**
  * router outside actor's event to proxy
  */
-export class EventRouter {
-    private eventChannel: IORedis.Redis;
-    private channelPrefix: string;
-    private _registry: { [id: string]: ActorProxy };
-    private _currentNode:Node;
-    
-    constructor() {
-        this._currentNode = Node.current();
-        this.eventChannel = new Redis();
-        this.channelPrefix = `${this._currentNode.id}#`;
-        this.eventChannel.psubscribe(`${this.channelPrefix}*`)
-        this.eventChannel.on('pmessage', this.handleEvent.bind(this));
+export class EventRouter implements IEventRouter {
+    private emitter: IORedis.Redis;
+    private receiver: IORedis.Redis;
+    private channelListeners: { [channel: string]: Function[] } = {};
+    private patternListeners: { [pattern: string]: Function[] } = {};
+
+    constructor(prefix?: string) {
+        this.emitter = new Redis();
+        this.receiver = new Redis();
+        this.receiver.on('pmessage', this.handlePatternEvent.bind(this));
+        this.receiver.on('message', this.handleEvent.bind(this));
     }
 
-    handleEvent(channel: string, message: string) {
-        let [node, id, eventName] = channel.split(/[#\/.]/);
-        if (node == this._currentNode.id) {
-            let actor = resolve(id);
-
-            if (actor) {
-                actor.emit(eventName, JSON.parse(message));
-            } else {
-                console.log('cannot find that actor with id', id);
-            }
+    /**
+     * handle pattern message from redis
+     */
+    private handlePatternEvent(pattern: string, channel: string, message: string) {
+        let [node, id, ...eventName] = channel.split(/[#\/.]/);
+        if (this.patternListeners[pattern]) {
+            this.patternListeners[pattern].forEach(
+                (cb) => cb(JSON.parse(message), eventName));
         }
     }
-    
-    dispose(){
-        this.eventChannel.disconnect();
+    /**
+     * handle pattern message from redis
+     */
+    private handleEvent(channel: string, message: string) {
+        let [node, id, eventName] = channel.split(/[#\/.]/);
+        
+        if (this.channelListeners[channel]) {
+            this.channelListeners[channel].forEach(
+                (cb) => cb(JSON.parse(message)));
+        }
     }
-}
+    /**
+     * local subscribe to actor proxy to listen to remote 
+     * events from remote actors
+     */
+    subscribe(actor: Pid, eventName: string, cb: Function) {
+        let ref = toRef(actor)
+        let channel = `${ref.node}#${ref.id}.${eventName}`;
 
-/**
- * publish events(js like events, not messages) to *remote* listeners
- */
-export function publish(actor: IActor, eventName: string, args: any[]) {
-    eventRouter.publishEvent(actor, eventName, args);
+        if (/\*/.test(eventName)) {
+            // it's a pattern 
+            if (!this.patternListeners[channel]) {
+                this.patternListeners[channel] = [];
+            }
+
+            this.patternListeners[channel].push(cb);
+            this.receiver.psubscribe(channel);
+        } else {
+            if (!this.channelListeners[channel]) {
+                this.channelListeners[channel] = [];
+            }
+
+            this.channelListeners[channel].push(cb);
+            this.receiver.subscribe(channel);
+        }
+    }
+
+    /**
+     * publish events(js like events, not messages) to *remote* listeners
+     */
+    publish(actor: Pid, eventName: string, args: any) {
+        let ref = toRef(actor);
+        this.emitter.publish(eventToChannel(ref, eventName), JSON.stringify(args));
+    }
+
+    dispose() {
+        this.emitter.disconnect();
+        this.receiver.disconnect();
+    }
 }

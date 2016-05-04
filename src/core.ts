@@ -22,9 +22,8 @@ export interface IActor {
 
 
 var dispatcher, eventRouter;
-var DefaultActor: IActor;
 var registry:{[id:string]:IActor}={};
-var nodeId:string = shortid.generate();
+export var nodeId:string = shortid.generate();
 
 /**
  * get the actor according to the name
@@ -63,11 +62,8 @@ export function start<T extends IActor>(ctor: {new(...args:any[]):T}, args?: any
     return actor;
 }
 
-export function bootstrap(cb?:Function){
-     dispatcher = new MessageDispatcher(Node.current().id);
-     if(cb){cb();}
-}
-
+// stop all actors and finally exit current process
+// TODO
 export function exit() {
     
 }
@@ -77,4 +73,30 @@ export function exit() {
 export function stop(actor: IActor, reason?:any) {
     delete registry[actor.pid];
     actor.onexit(reason);
+}
+
+var callbacks:Function[] = [];
+
+export function onBootstrap(cb:Function){
+    callbacks.push(cb);
+}
+
+export function bootstrap(cb?:Function){
+     dispatcher = new MessageDispatcher(nodeId);
+     callbacks.forEach((fn) => fn());
+     if(cb){cb();}
+}
+
+export function toRef(actor:any):Ref{
+    if(typeof actor == 'string'){
+        return {node: nodeId, id: actor}
+    } else if('pid' in actor){
+        if(typeof actor.pid == 'string'){
+            return {node: nodeId, id: actor.pid}
+        } else {
+            return actor.pid;
+        }
+    } else if(('node' in actor) && ('id' in actor)){
+        return actor;
+    }
 }

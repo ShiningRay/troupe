@@ -1,5 +1,6 @@
 import {Ref, Pid, IActor, resolve} from './core';
 import {ActorProxy} from './proxy'
+import {EventRouter} from './events'
 import * as Redis from 'ioredis';
 
 type ActorLike = ActorProxy | IActor;
@@ -36,6 +37,7 @@ export class World {
  * represent a node js process
  */
 export class Node {
+	private eventRouter:EventRouter;
 	/**
 	 * default_state :disconnected
 	 * state shutdown
@@ -43,7 +45,9 @@ export class Node {
 	 * partitioned
 	 */
 	constructor(public id:string,
-	public address:string){}
+	public address:string){
+		this.eventRouter = new EventRouter();
+	}
 
 	/**
 	 * return an actor proxy for interact with the remote actor
@@ -52,7 +56,7 @@ export class Node {
 		if (this.isCurrent()) {
 			return resolve(pid);
 		} else {
-			return new ActorProxy({node: this.id, id: pid});
+			return new ActorProxy({node: this.id, id: pid}, this.eventRouter);
 		}
 		 
 	}
