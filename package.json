@@ -6,22 +6,25 @@
   "scripts": {
     "prepublish": "tsc",
     "test": "mocha built/test/*.js",
-    "dev": "./node_modules/.bin/concurrently 'tsc -w' 'mocha -w built/test/*.js' "
+    "dev": "./node_modules/.bin/concurrently 'tsc -w' 'mocha -w built/test/*.test.js' "
   },
   "author": "ShiningRay",
   "license": "ISC",
   "dependencies": {
-    "bluebird": "^3.3.5",
+    "axon": "^2.0.2",
+    "bluebird": "^3.4.6",
     "core-decorators": "^0.12.2",
     "ioredis": "^1.15.1",
+    "lodash": "^4.16.6",
     "reflect-metadata": "^0.1.3",
-    "shortid": "^2.2.6",
-    "zmq": "^2.14.0"
+    "shortid": "^2.2.6"
   },
   "devDependencies": {
+    "@types/bluebird": "^3.0.35",
     "chai": "^3.5.0",
     "concurrently": "^2.0.0",
     "mocha": "^2.4.5",
-    "sinon": "^1.17.4"
+    "sinon": "^1.17.4",
+    "typescript": "^2.1.0-dev.20161013"
   }
 }

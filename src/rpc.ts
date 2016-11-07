@@ -1,5 +1,4 @@
-import {Ref, Pid, IActor, start, send, stop, onBootstrap} from './core';
-import {publish} from './events';
+import {Ref, Pid, IActor, start, send, stop, publishEvent, onBootstrap} from './core';
 import {Node} from './cluster';
 import * as Promise from 'bluebird';
 

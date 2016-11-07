@@ -11,7 +11,7 @@ function refToChannel(ref: Ref) {
 }
 
 function eventToChannel(ref: Ref, eventName: string) {
-    return `${ref.node}#${ref.id}.${eventName}`;
+    return `${ref.node}#${ref.id}#${eventName}`;
 }
 /**
  * TODO: maybe we can user rabbitmq or other mq as event router backend
@@ -40,7 +40,7 @@ export class EventRouter implements IEventRouter {
      * handle pattern message from redis
      */
     private handlePatternEvent(pattern: string, channel: string, message: string) {
-        let [node, id, ...eventName] = channel.split(/[#\/.]/);
+        let [node, id, eventName] = channel.split('#', 3);
         if (this.patternListeners[pattern]) {
             this.patternListeners[pattern].forEach(
                 (cb) => cb(JSON.parse(message), eventName));
@@ -50,7 +50,7 @@ export class EventRouter implements IEventRouter {
      * handle pattern message from redis
      */
     private handleEvent(channel: string, message: string) {
-        let [node, id, eventName] = channel.split(/[#\/.]/);
+        let [node, id, eventName] = channel.split('#', 3);
         
         if (this.channelListeners[channel]) {
             this.channelListeners[channel].forEach(
@@ -63,7 +63,7 @@ export class EventRouter implements IEventRouter {
      */
     subscribe(actor: Pid, eventName: string, cb: Function) {
         let ref = toRef(actor)
-        let channel = `${ref.node}#${ref.id}.${eventName}`;
+        let channel = `${ref.node}#${ref.id}#${eventName}`;
 
         if (/\*/.test(eventName)) {
             // it's a pattern 

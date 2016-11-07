@@ -27,11 +27,11 @@ export class MessageDispatcher {
             var args = JSON.parse(reply[1]);
             console.log('receive from queue', reply);
             self.process(args[0], args[1]);
-            process.nextTick(self.receive, self);
+            setImmediate(self.receive, self);
         }).catch((err) => {
             console.log('pop from queue error', err);
             // console.log('pop from queue error', err.stack);
-            process.nextTick(self.receive, self);
+            setImmediate(self.receive, self);
         });
     }
 

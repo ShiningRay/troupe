@@ -26,7 +26,7 @@ describe('EventRouter', function(){
             // let cb = sinon.spy();
             let args = {'nothing': true};
             router.subscribe(ref, 'test.*', function(a, name){
-                assert.deepEqual(name, ['test', 'hello']);
+                assert.deepEqual(name, 'test.hello');
                 assert.deepEqual(a,args);
                 done();
             });

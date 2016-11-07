@@ -10,6 +10,9 @@ type ActorLike = ActorProxy | IActor;
  * we save nodes information in redis 
  */
 export class World {
+	constructor(){
+		throw new Error('cannot instantiate this class')
+	}
 	static redis:IORedis.Redis = new Redis();
 	static findMachine():PromiseLike<Machine>{
 		return
@@ -70,6 +73,7 @@ export class Node {
 		
 	}
 }
+
 
 export class Machine {
 	static current():Machine {}

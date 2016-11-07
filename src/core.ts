@@ -1,6 +1,8 @@
 import shortid = require('shortid');
 import {Registry} from './registry';
-import {MessageDispatcher} from './dispatcher';
+import { MessageDispatcher } from './dispatcher';
+
+
 export interface Ref {
     node: string;
     id: string;
@@ -18,6 +20,10 @@ export interface IActor {
 
     emit(eventName: string, ...args: any[]);
     // run(...args:any[]):PromiseLike<any>;
+}
+
+export interface IActorProxy {
+  on(eventName: string);
 }
 
 
@@ -81,10 +87,16 @@ export function onBootstrap(cb:Function){
     callbacks.push(cb);
 }
 
-export function bootstrap(cb?:Function){
+interface ClusterConfig{
+    
+}
+import {EventRouter} from './events'
+export function bootstrap(config?:ClusterConfig, cb?:Function){
      dispatcher = new MessageDispatcher(nodeId);
+     eventRouter = new EventRouter();
      callbacks.forEach((fn) => fn());
      if(cb){cb();}
+     
 }
 
 export function toRef(actor:any):Ref{
@@ -99,4 +111,28 @@ export function toRef(actor:any):Ref{
     } else if(('node' in actor) && ('id' in actor)){
         return actor;
     }
+}
+
+
+
+// Theater: Machine ?
+// Director: Dispatcher ?
+// Scenario: Runtime
+// Stage: Process
+
+// Dialogue
+interface Dialogue {
+    method: string;
+    args: any[];
+}
+// Drama
+
+// Troupe: Whole system
+interface Troupe {
+
+}
+
+
+interface ActorDirectory {
+    find
 }
