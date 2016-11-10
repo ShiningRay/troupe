@@ -70,26 +70,60 @@ interface IActorDirectory {
 class ActorDirectory {
     private _map:{[id:string]:SimpleActor}
 }
+enum MessageType {
+    invocation,
+    result,
+    cast,
+    error,
+    event,
+    system
+}
+
+interface Message {
+    type: MessageType;
+    id: number;
+    from: AppearanceLocation;
+    to: AppearanceLocation;
+    extension: any;
+    timestamp: number;
+}
+
+interface InvokationMessage extends Message {
+    type: MessageType.invocation;
+    method: string;
+    parameters: any[];
+}
+
+interface ResultMessage extends Message {
+    type: MessageType.result;
+    result: any;
+}
+
+interface EventMessage extends Message {
+    type: MessageType.event;
+    name: string;
+    data: any;
+}
 
 /**
  * Active actor in system
  * contains some runtime information
  */
 class Appearance {
-    private mailbox:any[];
+    private mailbox:Message[];
     private processing:boolean = false;
     private actor: Actor;
     private reference: ActorReference;
-    private execute:Function;
+    private execute:(msg:Message) => any;
 
-    onmessage(message:any){
+    onmessage(message:Message){
         if(this.processing)
             this.mailbox.push(message);
         else
             this.execute(message);
     }
 
-    run(message:any):PromiseLike<any>{
+    run(message:Message):PromiseLike<any>{
         return
     }
 }
