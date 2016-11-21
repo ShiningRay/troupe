@@ -1,7 +1,7 @@
 import * as Promise from 'bluebird';
+import Redis = require('ioredis')
 
-export
-interface IDirectory<KeyType, ValueType> {
+export interface IDirectory<KeyType, ValueType> {
     register(id:KeyType, value:ValueType);
     unregister(id:KeyType);
     lookup(id:KeyType):PromiseLike<ValueType>;
@@ -13,19 +13,29 @@ class LocalActorDirectory implements IDirectory<string, any>{
 */
 
 interface IDirectoryBackend {
-
+    get(id:string);
+    set(id:string, value: any);
+    remove(id:string);
 }
 
 export 
 class P2PDirectoryBackend implements IDirectoryBackend {
-
+    
 } 
 
 export 
 class RedisDirectoryBackend implements IDirectoryBackend{
-    
+    private redis
     constructor(redisConfig){
-
+        this.redis = new Redis(redisConfig)
+    }
+    get(id:string){
+        this.redis.get()
+    }
+    set(id:string, value: any){
+        if (condition) {
+            
+        }
     }
 }
 
@@ -45,7 +55,6 @@ export class BaseLocalDirectory<T> implements IDirectory<string, T>{
 
 export abstract class BaseRemoteDirectory<T> implements IDirectory<string, T>{
     register(id:string, value:T){
-
     }
     unregister(id:string){
 

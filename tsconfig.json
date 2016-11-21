@@ -11,6 +11,9 @@
         "outDir": "built/",
         "noLib": false
     },
+    "include": [
+        "src/**/*"
+    ],    
     "exclude": [
         "node_modules",
         "typings/browser/",

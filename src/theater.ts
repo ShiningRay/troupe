@@ -1,6 +1,9 @@
 import {Stage} from './stage'
 import _ = require('lodash')
 import shortid = require('shortid')
+import {IDirectory, RedisDirectoryBackend} from './directory'
+import { injectable, inject } from "inversify";
+import "reflect-metadata";
 
 export class Theater {
     static readonly current:Theater=new Theater();
@@ -14,6 +17,7 @@ export class Theater {
      */
     current: boolean;
     stages: Stage[];
+    
     constructor(id:string=process.env.THEATER_ID, address:string=process.env.THEATER_ADDRESS){
         this.id = id;
         this.address = address;
@@ -39,8 +43,9 @@ export class TheaterDirectory {
  * expose some api for manage process on the same machine 
  */
 class TheaterCurator {
-    constructor(id:string=shortid()){
-
+    constructor(id:string=shortid.generate()){
+        process.title=`Theater #${id}`
+        new TheaterDirectory()
     }
     /**
      * start cluster on current machine;
