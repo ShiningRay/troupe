@@ -1,14 +1,55 @@
-import {Actor} from './actor'
+import {AbstractActor} from './actor'
+import _ = require('lodash')
+import eval2 = require('eval2')
+
+const ActorTemplate = `
+(function(inherits, AbstractActor){
+    var actorClass = function(){
+        AbstractActor.call(this);
+    }
+    inherits(actorClass, AbstractActor);
+    <% _.each(trait, (method, name) => {%>
+    actorClass.prototype.<%= name %> = <%= method %>
+    <% } %>    
+    return actorClass;
+})
+`
+
+const ReferenceTemplate = `
+(function(inherits, Reference){
+    var referenceClass = function(){
+
+    }
+    inherits(referenceClass, Reference);
+    <% _.each(trait, (method, name) => {%>
+    referenceClass.prototype.<%= name %> = <%= method %>
+    <% } %>
+    return referenceClass;
+})
+`
+
+const FactoryTemplate = `
+`
+
 
 class Role {
-    all:any= {}
-    referenceClasses:any= {}
+    actorClasses:{[key:string]: Function} = {}
+    referenceClasses:{[key:string]: Function}= {}
+    factoryClasses:{[key:string]: Function} = {}
 
-    get (name) {
-        return this.all[name]
+    getActor(name) {
+        return this.actorClasses[name];
     }
 
-    static define (name, trait) {
+    getReference(name){
+        return this.referenceClasses[name];
+    }
+
+    getFactory(name){
+        return this.factoryClasses[name]
+    }
+
+    static define<Trait=any>(name, trait:Trait) {
         // var role = function () { }
         // role.prototype = trait;
         var referenceClass = function(){
@@ -24,10 +65,18 @@ class Role {
                 referenceClass.prototype[methodName] = new Function("return this.invoke('"+methodName+"', arguments)")
             }
         }
-        this.all[name] = role; 
+        this.actorClasses[name] = role; 
         return role;
     }
-    generateReference(methodNames){
+
+    static register<Trait=any>(name, actorClass:Actor){
+
+    }
+
+    static extends<Trait>(name, parent, trait:Trait){
+
+    }
+    static generateReference(methodNames){
 
     }
 }

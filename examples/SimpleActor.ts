@@ -23,8 +23,27 @@ class HelloWorld extends SimpleActor implements IHelloWorld {
     getCounter():PromiseLike<number>{
         return Promise.resolve(this._counter);
     }
+
+    $onActivateAsync(){
+
+    }
+    $onDeactivateAsync(){
+        
+    }
 }
 
 Actor.get<IHelloWorld>('HelloWorld', 'abc')
 const hello: IHelloWorld = Actor.get<IHelloWorld>('HelloWorld', 1);
 hello.hello().then(console.log)
+
+// syntax 1
+@Role()
+class HelloWorld implements IHelloWorld {
+
+}
+
+// syntax 2
+
+Role.define<IHelloWorld>('HelloWorld', {
+
+});

@@ -14,16 +14,19 @@ export abstract class RemoteReference<T> {
     invoke(name, args){
         return Scenario.current.invoke(this.address, name, args)
     }
-}
 
+    static generateSubclass(){
+
+    }
+}
 
 /**
  * 
  */
-export class Actor<T> {
+export class Actor {
     static roles: { [name: string]: Function }
     static references;
-    static get<T>(type: string, id: any): T {
+    static get<Trait>(roleName: string, id: any): Trait {
         let role = this.references[type]
         return
     }
@@ -34,7 +37,7 @@ export class Actor<T> {
 type Constructor<T> = new (...args: any[]) => T;
 // Actor.Base = Base;
 
-abstract class AbstractActor<State> {
+export abstract class AbstractActor<State> {
 
     static readonly role;
 
