@@ -9,12 +9,12 @@ export enum MessageType {
 }
 
 export interface Message {
-    id: number;
+    id?: number;
     type: MessageType;
-    from: AppearanceLocation;
-    to: AppearanceLocation;
-    extension: any;
-    timestamp: number;
+    from: any;
+    to: any;
+    extension?: any;
+    timestamp?: number;
 }
 
 export interface InvocationMessage extends Message {
@@ -45,8 +45,10 @@ export class ActorAddress {
 
 export interface ErrorMessage extends Message {
     type: MessageType.error;
-    content: string;
-    stack: string[];
+    reqid: number;
+    name: string;
+    message: string;
+    stack: string;
 }
 
 

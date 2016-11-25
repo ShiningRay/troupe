@@ -1,7 +1,9 @@
 import { Actor } from './actor'
 import Promise = require('bluebird')
 import { Stage } from './stage'
+import {Scenario } from './scenario'
 import { Message, MessageType, InvocationMessage, ResultMessage, ErrorMessage, EventMessage } from './messages'
+import {EventEmitter} from 'events'
 /**
  * address
  */
@@ -33,7 +35,7 @@ function serializedExecutor(message) {
             setImmediate(() => this.execute());
         }
     }).catch((err) => {
-        this.actor.onerror(err);
+        this.actor.$onError(err);
     });
 }
 
@@ -44,42 +46,42 @@ function reentrantExecutor(message) {
 interface RequestSpec {
     resolve: Function;
     reject: Function;
-    timeout: number | NodeJS.Timer;
+    timeout: NodeJS.Timer;
 }
 /**
  * remote proxy of actor
  * properties starts with `$` is restrict to current scenario
  */
-class Reference {
+export class Reference extends EventEmitter {
     public $local: boolean = false;
-    public $id: any = ''
+    public $id: any = '';
+    public $target: any;
     public readonly $stage: Stage;
 
     private __requests: { [id: number]: RequestSpec } = {};
     private __reqId: number = 0;
 
     private __send(message) {
-        Stage.sendMessage(message);
+        Scenario.sendMessage(message);
     }
-    private __invoke(): PromiseLike<any> {
+    public $invoke(method:string, args:any[]) {
         return new Promise((resolve, reject) => {
             var reqId = this.__reqId++;
             this.__send({
-                type: 'call',
+                type: MessageType.invocation,
                 reqid: reqId, 
                 method: method, 
-                params: args, 
-                from: { 
-                    node: Ray.node, 
-                    id: this.pid 
-                }
+                params: args,
+                to: this.$target, 
+                from: this.$id
             });
-            
+            let t = setTimeout(this.__timeout, 10000, reqId, this) // TODO: move timeout to option
             this.__requests[reqId] = {
                 resolve: resolve,
                 reject: reject,
-                timeout: setTimeout(this.__timeout, 10000, reqId, this) // TODO: move timeout to option                
+                timeout: t
             }
+            t.unref();    
         });
     }
 
@@ -100,29 +102,28 @@ class Reference {
         }
     }
 
-    public $handleResult(message:ResultMessage):PromiseLike<any>{
+    public $handleResult(message:ResultMessage){
         let req = this.__requests[message.reqid];
         if (req) {
-            clearTimeout(req.timeout as number);
+            clearTimeout(req.timeout);
             delete this.__requests[message.reqid];
-            return req.resolve(message.result);
+            req.resolve(message.result);
         } else {
-            console.log('cannot find corresponding request')
+            console.log('cannot find corresponding request', message)
         }
     }
 
     public $handleError(message:ErrorMessage):PromiseLike<any>{
         let req = this.__requests[message.reqid];
         if (req) {
-            clearTimeout(req.timeout as number);
+            clearTimeout(req.timeout);
             delete this.__requests[message.reqid];
-            return req.resolve(message.result);
+            return req.reject(message);
         } else {
-            console.log('cannot find corresponding request')
+            console.log('cannot find corresponding request', message)
         }        
     }
 }
-
 
 /**
  * Activation of actor in system
@@ -136,16 +137,17 @@ class Appearance {
     private execute: (msg: Message) => any;
     public readonly actor: Actor;
 
-    handleInvocation(message: InvocationMessage): PromiseLike<any> {
-        
+    handleInvocation(message: InvocationMessage) {
         if (this.processing)
             this.mailbox.push(message);
         else
             this.execute(message);
 
+    }
+
+    run(message){
         /////
         if (typeof this.actor[message.method] != 'function') {
-
             return this.send(message.from, { type: 'error', error: "no such method", reqid: message.reqid });
         }
         try {
@@ -166,14 +168,12 @@ class Appearance {
         } else {
             send(message.from, { type: 'result', result: result, reqid: message.reqid });
         }
-        return
+        return        
     }    
 }
 
 
 class Dispatcher {
-    
-
     constructor(private actor: Actor, reentrant: boolean = false) {
         if (reentrant) {
             this.execute = reentrantExecutor

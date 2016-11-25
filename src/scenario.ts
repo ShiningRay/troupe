@@ -7,5 +7,13 @@ export class Scenario {
     router: MessageRouter;
     dispatcher: MessageDispatcher; 
     static readonly current:Scenario = new Scenario();
+
+    sendMessage(message){
+
+    }
+
+    static sendMessage(message){
+        this.current.sendMessage(message)
+    }
 }
 

@@ -27,12 +27,16 @@
     "@types/ioredis": "^0.0.21",
     "@types/mocha": "^2.2.33",
     "@types/node": "^6.0.48",
+    "@types/rewire": "^2.5.27",
     "@types/shortid": "^0.0.28",
     "@types/should": "^8.1.30",
     "@types/sinon": "^1.16.32",
     "chai": "^3.5.0",
     "concurrently": "^2.0.0",
+    "mm": "^2.0.0",
     "mocha": "^2.4.5",
+    "mock": "^0.1.1",
+    "rewire": "^2.5.2",
     "sinon": "^1.17.4",
     "typescript": "^2.2.0-dev.20161123"
   }
