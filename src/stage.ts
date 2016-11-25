@@ -1,24 +1,25 @@
-import {Transport} from './transport'
-import {Theater} from './theater'
+import { Transport } from './transport'
+import { Theater } from './theater'
+
 export class Stage {
     readonly theater: Theater;
-    readonly pid:number;
+    readonly pid: number;
     readonly port: number;
     /**
      * on the same machine with current process
      */
-    readonly local:boolean;
+    readonly local: boolean;
     /**
      * is current process?
      */
-    readonly current:boolean;
+    readonly current: boolean;
     /**
      * the message transport with current process
      */
-    transport: Transport;
+    transport?: Transport;
     static current: Stage = new Stage();
-    constructor(){
-        this.theater=Theater.current;
+    constructor() {
+        this.theater = Theater.current;
     }
 }
 

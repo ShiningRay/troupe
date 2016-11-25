@@ -19,12 +19,14 @@ export interface Message {
 
 export interface InvocationMessage extends Message {
     type: MessageType.invocation;
+    reqid: number;
     method: string;
     parameters: any[];
 }
 
 export interface ResultMessage extends Message {
     type: MessageType.result;
+    reqid: number;
     result: any;
 }
 

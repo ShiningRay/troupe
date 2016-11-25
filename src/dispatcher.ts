@@ -2,6 +2,12 @@ import {Ref, IActor, resolve} from './core'
 
 import Redis = require('ioredis');
 
+export class MessageRouter {
+    route(message){
+
+    }
+}
+
 /**
  * Dispatcher for routing messages to correct actor
  */

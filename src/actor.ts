@@ -164,37 +164,3 @@ interface MessageRouter {
 interface MessageDispatcher {
     on(type:'message', callback: (message:Message) => any):this;
 }
-
-
-
-
-
-/**
- * Active actor in system
- * contains some runtime information
- */
-class Appearance {
-    private mailbox:any[];
-    private processing:boolean = false;
-    private actor: Actor;
-    private execute:Function;
-
-    onmessage(message:any){
-        if(this.processing)
-            this.mailbox.push(message);
-        else
-            this.execute(message);
-    }
-
-    run(message:any):PromiseLike<any>{
-        return
-    }
-}
-
-/**
- * an Actor implementation which ensure thread safety
- * one message by one message
- */
-class AbstractActor {
-
-}

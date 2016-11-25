@@ -18,13 +18,11 @@ interface IDirectoryBackend {
     remove(id:string);
 }
 
-export 
-class P2PDirectoryBackend implements IDirectoryBackend {
+export class P2PDirectoryBackend implements IDirectoryBackend {
     
 } 
 
-export 
-class RedisDirectoryBackend implements IDirectoryBackend{
+export class RedisDirectoryBackend implements IDirectoryBackend{
     private redis
     constructor(redisConfig){
         this.redis = new Redis(redisConfig)

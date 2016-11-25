@@ -33,44 +33,34 @@ const FactoryTemplate = `
 
 
 class Role {
-    actorClasses:{[key:string]: Function} = {}
-    referenceClasses:{[key:string]: Function}= {}
-    factoryClasses:{[key:string]: Function} = {}
+    static actorClasses:{[key:string]: Function} = {}
+    static referenceClasses:{[key:string]: Function}= {}
+    static factoryClasses:{[key:string]: Function} = {}
 
-    getActor(name) {
+    static getActor(name) {
         return this.actorClasses[name];
     }
 
-    getReference(name){
+    static getReference(name){
         return this.referenceClasses[name];
     }
 
-    getFactory(name){
+    static getFactory(name){
         return this.factoryClasses[name]
     }
 
-    static define<Trait=any>(name, trait:Trait) {
+    static define<Trait>(name, trait:Trait) {
         // var role = function () { }
         // role.prototype = trait;
-        var referenceClass = function(){
-            RemoteReference.call(this)
-        }
-
-        inherits(referenceClass, RemoteReference)
-
-        for (var methodName in trait) {
-            var s = methodName.charAt(0), method = trait[methodName]
-            if (trait.hasOwnProperty(methodName) && typeof method === 'function' && s !== '_' && s !== '$') {
-// define role method
-                referenceClass.prototype[methodName] = new Function("return this.invoke('"+methodName+"', arguments)")
-            }
-        }
         this.actorClasses[name] = role; 
         return role;
     }
 
-    static register<Trait=any>(name, actorClass:Actor){
-
+    static register(name, actorClass?){
+        if(typeof name !== 'string') {
+            actorClass = name;
+            name = actorClass.name;
+        }
     }
 
     static extends<Trait>(name, parent, trait:Trait){
