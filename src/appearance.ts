@@ -129,7 +129,8 @@ export class Reference extends EventEmitter {
  * Activation of actor in system
  * contains some runtime information
  */
-class Appearance {
+export class Appearance {
+    public readonly id: any;
     public processing: boolean = false;
     public reference: Reference;
     public reentrant: boolean = false;
@@ -169,50 +170,6 @@ class Appearance {
             send(message.from, { type: 'result', result: result, reqid: message.reqid });
         }
         return        
-    }    
-}
-
-
-class Dispatcher {
-    constructor(private actor: Actor, reentrant: boolean = false) {
-        if (reentrant) {
-            this.execute = reentrantExecutor
-        } else {
-            this.execute = serializedExecutor
-        }
-    }
-
-    onmessage(message: Message) {
-        switch (message.type) {
-            case MessageType.invocation:
-                return this.handleInvocation(message);
-            case MessageType.result:
-                this.handleResult(message);
-                return
-            case MessageType.error:
-                break;
-            case MessageType.event:
-                break;
-            default:
-
-        }
-    }
-
-    send(from, to) {
-
-    }
-
-
-    handleResult(message: ResultMessage): PromiseLike<any> {
-        return this.reference.$handleResult(message);
-    }
-
-    handleError(message:ErrorMessage){
-        return this.reference.$handleError(message);
-    }
-
-    run(message: Message): PromiseLike<any> {
-
     }    
 }
 

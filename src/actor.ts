@@ -1,6 +1,6 @@
 import {EventEmitter} from 'events'
 import * as Promise from 'bluebird';
-
+import { Scenario } from './scenario'
 /**
  * T stands for the interface actor type shared with reference
  */

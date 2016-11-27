@@ -3,6 +3,7 @@ import { Theater } from './theater'
 
 export class Stage {
     readonly theater: Theater;
+    readonly id: string;
     readonly pid: number;
     readonly port: number;
     /**
@@ -18,8 +19,13 @@ export class Stage {
      */
     transport?: Transport;
     static current: Stage = new Stage();
+    
     constructor() {
         this.theater = Theater.current;
+    }
+
+    static find(id):Stage{
+
     }
 }
 

@@ -1,9 +1,11 @@
 import {Ref, IActor, resolve} from './core'
+import { Message, MessageType } from './messages';
+import { Scenario } from './scenario';
 
 import Redis = require('ioredis');
 
 export class MessageRouter {
-    route(message){
+    send(message){
 
     }
 }
@@ -11,6 +13,39 @@ export class MessageRouter {
 /**
  * Dispatcher for routing messages to correct actor
  */
+
+
+
+export class Dispatcher {
+    onMessage(message: Message) {
+        switch (message.type) {
+            case MessageType.invocation:
+                Scenario.findAppearance()
+                break;
+            case MessageType.result:
+                
+                break;
+            case MessageType.error:
+                break;
+            case MessageType.event:
+                break;
+            default:
+        }
+    }
+
+    handleResult(message: ResultMessage): PromiseLike<any> {
+        return this.reference.$handleResult(message);
+    }
+
+    handleError(message:ErrorMessage){
+        return this.reference.$handleError(message);
+    }
+
+    run(message: Message): PromiseLike<any> {
+
+    }    
+}
+
 export class MessageDispatcher {
     private redis: IORedis.Redis;
     public nodeId: string;
