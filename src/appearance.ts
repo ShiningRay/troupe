@@ -1,9 +1,10 @@
 import { Actor } from './actor'
 import Promise = require('bluebird')
 import { Stage } from './stage'
-import {Scenario } from './scenario'
+import { Scenario } from './scenario'
 import { Message, MessageType, InvocationMessage, ResultMessage, ErrorMessage, EventMessage } from './messages'
-import {EventEmitter} from 'events'
+import { EventEmitter } from 'events'
+import { Reference } from './reference';
 /**
  * address
  */
@@ -43,87 +44,6 @@ function reentrantExecutor(message) {
     return this.run(message);
 }
 
-interface RequestSpec {
-    resolve: Function;
-    reject: Function;
-    timeout: NodeJS.Timer;
-}
-/**
- * remote proxy of actor
- * properties starts with `$` is restrict to current scenario
- */
-export class Reference extends EventEmitter {
-    public $local: boolean = false;
-    public $id: any = '';
-    public $target: any;
-    public readonly $stage: Stage;
-
-    private __requests: { [id: number]: RequestSpec } = {};
-    private __reqId: number = 0;
-
-    private __send(message) {
-        Scenario.sendMessage(message);
-    }
-    public $invoke(method:string, args:any[]) {
-        return new Promise((resolve, reject) => {
-            var reqId = this.__reqId++;
-            this.__send({
-                type: MessageType.invocation,
-                reqid: reqId, 
-                method: method, 
-                params: args,
-                to: this.$target, 
-                from: this.$id
-            });
-            let t = setTimeout(this.__timeout, 10000, reqId, this) // TODO: move timeout to option
-            this.__requests[reqId] = {
-                resolve: resolve,
-                reject: reject,
-                timeout: t
-            }
-            t.unref();    
-        });
-    }
-
-    /**
-     * handle timeout of request
-     */
-    private __timeout(reqId: number, self?: Reference) {
-        if (!self) {
-            self = this;
-        }
-        var req = self.__requests[reqId];
-        if (req) {
-            // console.log(Scenario.current(), self.__requests);
-            delete self.__requests[reqId];
-            req.reject(new Error(`${self} call remote method timeout ${reqId}`));
-        } else {
-            console.log("Timeout but cannot found corresponding requestspec");
-        }
-    }
-
-    public $handleResult(message:ResultMessage){
-        let req = this.__requests[message.reqid];
-        if (req) {
-            clearTimeout(req.timeout);
-            delete this.__requests[message.reqid];
-            req.resolve(message.result);
-        } else {
-            console.log('cannot find corresponding request', message)
-        }
-    }
-
-    public $handleError(message:ErrorMessage):PromiseLike<any>{
-        let req = this.__requests[message.reqid];
-        if (req) {
-            clearTimeout(req.timeout);
-            delete this.__requests[message.reqid];
-            return req.reject(message);
-        } else {
-            console.log('cannot find corresponding request', message)
-        }        
-    }
-}
 
 /**
  * Activation of actor in system
@@ -135,8 +55,15 @@ export class Appearance {
     public reference: Reference;
     public reentrant: boolean = false;
     private mailbox: Message[];
-    private execute: (msg: Message) => any;
+    private execute: (msg: Message) => any = serializedExecutor;
     public readonly actor: Actor;
+
+    constructor(actor: Actor, reentrant = false) {
+        this.actor = actor;
+        if (reentrant) {
+            this.execute = reentrantExecutor
+        }
+    }
 
     handleInvocation(message: InvocationMessage) {
         if (this.processing)
@@ -145,16 +72,33 @@ export class Appearance {
             this.execute(message);
 
     }
+    sendError(to: any, error:any, reqid:number) {
+        return {
+            type: MessageType.error, 
+            error: error, 
+            reqid: reqid
+        }
+    }
 
-    run(message){
-        /////
+    run(message: InvocationMessage) {
+        
         if (typeof this.actor[message.method] != 'function') {
-            return this.send(message.from, { type: 'error', error: "no such method", reqid: message.reqid });
+            return Scenario.sendMessage({
+                type: MessageType.error, 
+                to: message.from, 
+                error: "no such method", 
+                reqid: message.reqid 
+            });
         }
         try {
-            var result = this[message.method].apply(this, message.args);
+            var result = this.actor[message.method].apply(this.actor, message.params);
         } catch (err) {
-            return send(message.from, { type: 'error', error: err, reqid: message.reqid });
+            return Scenario.sendMessage({
+                to: message.from, 
+                type: MessageType.error, 
+                error: err, 
+                reqid: message.reqid 
+            });
         }
 
         // send back
@@ -162,20 +106,27 @@ export class Appearance {
         if (typeof result.then == 'function') {
             result.then(
                 (data) =>
-                    send(message.from, { type: 'result', result: result, reqid: message.reqid })
+                    Scenario.sendMessage({
+                        to: message.from, 
+                        type: MessageType.result, 
+                        result: result, 
+                        reqid: message.reqid 
+                    })
             ).catch(
                 (err) =>
-                    send(message.from, { type: 'error', error: err, reqid: message.reqid }));
+                    Scenario.sendMessage({
+                        to: message.from, 
+                        type: MessageType.error, 
+                        error: err, 
+                        reqid: message.reqid }));
         } else {
-            send(message.from, { type: 'result', result: result, reqid: message.reqid });
+            Scenario.sendMessage({
+                to: message.from, 
+                type: MessageType.result, 
+                result: result, 
+                reqid: message.reqid 
+            });
         }
-        return        
-    }    
-}
-
-/**
- * global singleton
- */
-class Router {
-
+        return
+    }
 }

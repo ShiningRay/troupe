@@ -25,6 +25,10 @@ export class Stage {
     }
 
     static find(id):Stage{
+        
+    }
+    // when new stage appears, fire the event
+    static onConnect(cb:(stage) => any){
 
     }
 }

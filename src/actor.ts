@@ -1,24 +1,8 @@
 import {EventEmitter} from 'events'
 import * as Promise from 'bluebird';
 import { Scenario } from './scenario'
-/**
- * T stands for the interface actor type shared with reference
- */
-export abstract class RemoteReference<T> {
-    interfaceName: string;
-    interfaceClass: new (...args:any[]) => T;    
-    constructor(){
-        
-    }
+import { Appearance } from './appearance';
 
-    invoke(name, args){
-        return Scenario.current.invoke(this.address, name, args)
-    }
-
-    static generateSubclass(){
-
-    }
-}
 
 /**
  * 

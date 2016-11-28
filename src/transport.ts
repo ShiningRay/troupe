@@ -5,8 +5,8 @@ import { Duplex, Transform } from 'stream'
 import { Message } from './messages'
 import { Stage } from './stage';
 
-export interface Transport {
-
+export interface Transport extends NodeJS.ReadWriteStream{
+    write(obj:any)
 }
 
 /**

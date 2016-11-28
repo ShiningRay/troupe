@@ -12,7 +12,8 @@ describe('RedisTransport', () => {
     var transport
     beforeEach(() => {
 
-    })
+    });
+    
     describe('receive objects', () => {
         const msg = {
             type: MessageType.invocation,
@@ -30,10 +31,8 @@ describe('RedisTransport', () => {
             result: 'world'
         }
         beforeEach(() => {
-            
             mm(Stage.current, 'id', 'test');
             transport = new RedisTransport(Stage.current);
-            
             // mm(transport, 'mailbox', redis);
         });
         afterEach((done) => {

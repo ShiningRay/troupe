@@ -1,27 +1,36 @@
 import { Stage } from './stage';
-import { Appearance, Reference } from './appearance';
-import {MessageDispatcher, MessageRouter} from './dispatcher'
+import { Appearance } from './appearance';
+import Dispatcher from './dispatcher'
+import { Reference } from './reference';
+import { Message } from './messages';
 
 export class Scenario {
-    readonly stage: Stage=Stage.current;
-    router: MessageRouter;
-    dispatcher: MessageDispatcher; 
-    
-    static readonly current:Scenario = new Scenario();
+    readonly stage: Stage = Stage.current;
+    // router: (msg:Message) => any;
+    dispatcher: (msg:Message) => any = Dispatcher;
 
-    sendMessage(message){
-        var stage = Stage.find(message.to);
+    static readonly current: Scenario = new Scenario();
+    private constructor(){
+        Stage.onConnect((stage) => {
+            stage.transport.on('data', (msg) => this.dispatcher(<Message>msg))
+        });
     }
 
-    static sendMessage(message){
+    sendMessage(message) {
+        message.from = this.stage.id;
+        var stage = Stage.find(message.to);
+        stage.transport.write(message);
+    }
+
+    static sendMessage(message) {
         this.current.sendMessage(message)
     }
 
-    static findAppearance(id):Appearance{
-        return 
+    static findAppearance(id): Appearance {
+        return
     }
 
-    static findReference(id):Reference{
+    static findReference(id): Reference {
         return
     }
 }
