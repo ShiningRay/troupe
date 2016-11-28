@@ -2,7 +2,7 @@ import { Scenario } from './scenario';
 import { EventEmitter } from 'events';
 import { Stage } from './stage';
 import * as Promise from 'bluebird';
-import { MessageType, ResultMessage, ErrorMessage, EventMessage } from './messages';
+import { MessageType, ResultMessage, ErrorMessage, EventMessage, InvocationMessage } from './messages';
 
 interface RequestSpec {
     resolve: Function;
@@ -13,7 +13,7 @@ interface RequestSpec {
  * remote proxy of actor
  * properties starts with `$` is restrict to current scenario
  */
-export class Reference extends EventEmitter {
+export abstract class Reference extends EventEmitter {
     public $local: boolean = false;
     public $id: any = '';
     public $target: any;
@@ -22,7 +22,7 @@ export class Reference extends EventEmitter {
     private __requests: { [id: number]: RequestSpec } = {};
     private __reqId: number = 0;
 
-    private __send(message) {
+    private __send(message:InvocationMessage) {
         Scenario.sendMessage(message);
     }
     public $invoke(method:string, args:any[]) {
@@ -74,7 +74,7 @@ export class Reference extends EventEmitter {
         }
     }
 
-    public $handleError(message:ErrorMessage):PromiseLike<any>{
+    public $handleError(message:ErrorMessage){
         let req = this.__requests[message.reqid];
         if (req) {
             clearTimeout(req.timeout);
@@ -86,6 +86,10 @@ export class Reference extends EventEmitter {
     }
 
     public $handleEvent(message:EventMessage){
-        
+        if(Array.isArray(message.data)){
+            this.emit(message.name, ...message.data)
+        } else {
+            this.emit(message.name, message.data)
+        }
     }
 }

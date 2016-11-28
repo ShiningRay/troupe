@@ -1,6 +1,7 @@
-import {AbstractActor} from './actor'
+import { AbstractActor, Actor } from './actor';
 import _ = require('lodash')
 import eval2 = require('eval2')
+import {inherits} from 'util'
 
 const ActorTemplate = `
 (function(inherits, AbstractActor){
@@ -32,7 +33,7 @@ const FactoryTemplate = `
 `
 
 
-class Role {
+export class Role {
     static actorClasses:{[key:string]: Function} = {}
     static referenceClasses:{[key:string]: Function}= {}
     static factoryClasses:{[key:string]: Function} = {}
@@ -50,8 +51,13 @@ class Role {
     }
 
     static define<Trait>(name, trait:Trait) {
-        // var role = function () { }
-        // role.prototype = trait;
+        var role = function () { 
+            Actor.apply(this);
+        }
+
+        inherits(role, Actor)
+        role.prototype = trait;
+        role['name'] = name;
         this.actorClasses[name] = role; 
         return role;
     }

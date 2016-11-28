@@ -2,7 +2,7 @@ import { Actor } from './actor'
 import Promise = require('bluebird')
 import { Stage } from './stage'
 import { Scenario } from './scenario'
-import { Message, MessageType, InvocationMessage, ResultMessage, ErrorMessage, EventMessage } from './messages'
+import { Message, MessageType, InvocationMessage, ResultMessage, ErrorMessage, EventMessage } from './messages';
 import { EventEmitter } from 'events'
 import { Reference } from './reference';
 /**
@@ -15,7 +15,7 @@ class AppearanceLocation {
 /**
  * 
  */
-function serializedExecutor(message) {
+function serializedExecutor(message?:InvocationMessage) {
     this.processing = true;
 
     if (!message) {
@@ -27,7 +27,15 @@ function serializedExecutor(message) {
     }
 
     // execute one message
-    return this.run(message).then(() => {
+    return this.run(message, (err) => {
+        if (err) {
+            if (typeof this.actor.$onError == 'function') {
+                return this.actor.$onError(err, () => this.execute());
+            } else {
+                console.error(err);
+            }
+        }
+
         if (this.mailbox.length == 0) {
             // no remaining messages, stop processing
             this.processing = false;
@@ -35,8 +43,6 @@ function serializedExecutor(message) {
             // push job to event loop
             setImmediate(() => this.execute());
         }
-    }).catch((err) => {
-        this.actor.$onError(err);
     });
 }
 
@@ -54,7 +60,7 @@ export class Appearance {
     public processing: boolean = false;
     public reference: Reference;
     public reentrant: boolean = false;
-    private mailbox: Message[];
+    private mailbox: Message[] = [];
     private execute: (msg: Message) => any = serializedExecutor;
     public readonly actor: Actor;
 
@@ -72,61 +78,67 @@ export class Appearance {
             this.execute(message);
 
     }
-    sendError(to: any, error:any, reqid:number) {
-        return {
-            type: MessageType.error, 
-            error: error, 
-            reqid: reqid
-        }
-    }
 
-    run(message: InvocationMessage) {
-        
+    run(message: InvocationMessage, next?: Function) {
         if (typeof this.actor[message.method] != 'function') {
-            return Scenario.sendMessage({
-                type: MessageType.error, 
-                to: message.from, 
-                error: "no such method", 
-                reqid: message.reqid 
-            });
+            Scenario.sendMessage({
+                type: MessageType.error,
+                from: null,
+                to: message.from,
+                name: 'NoMethodError',
+                message: "no such method " +message.method,
+                reqid: message.reqid
+            } as ErrorMessage);
+            return next('no such method');
         }
         try {
             var result = this.actor[message.method].apply(this.actor, message.params);
         } catch (err) {
-            return Scenario.sendMessage({
-                to: message.from, 
-                type: MessageType.error, 
-                error: err, 
-                reqid: message.reqid 
-            });
+            Scenario.sendMessage({
+                to: message.from,
+                from: null,
+                type: MessageType.error,
+                name: err.name,
+                message: err.message,
+                stack: err.stack,
+                reqid: message.reqid
+            } as ErrorMessage);
+            return next(err)
         }
 
         // send back
         // if result is a promise
-        if (typeof result.then == 'function') {
-            result.then(
-                (data) =>
-                    Scenario.sendMessage({
-                        to: message.from, 
-                        type: MessageType.result, 
-                        result: result, 
-                        reqid: message.reqid 
-                    })
-            ).catch(
-                (err) =>
-                    Scenario.sendMessage({
-                        to: message.from, 
-                        type: MessageType.error, 
-                        error: err, 
-                        reqid: message.reqid }));
+        if (result && typeof result.then == 'function') {
+            result.then((data) => {
+                Scenario.sendMessage({
+                    to: message.from,
+                    from: null,
+                    type: MessageType.result,
+                    result: data,
+                    reqid: message.reqid
+                })
+                next()
+            }).catch((err) => {
+                Scenario.sendMessage({
+                    to: message.from,
+                    from: null,
+                    type: MessageType.error,
+                    name: err.name,
+                    message: err.message,
+                    stack: err.stack,
+                    reqid: message.reqid
+                } as ErrorMessage)
+                next(err)
+            });
         } else {
             Scenario.sendMessage({
-                to: message.from, 
-                type: MessageType.result, 
-                result: result, 
-                reqid: message.reqid 
+                to: message.from,
+                from: null,
+                type: MessageType.result,
+                result: result,
+                reqid: message.reqid
             });
+            next();
         }
-        return
     }
 }

@@ -3,10 +3,11 @@ import * as sinon from 'sinon'
 import {assert, expect} from 'chai'
 // var appeareance = rewire("../src/myModule.js")
 // appeareance.__set__('Scenario', sinon)
-import {Reference} from '../src/appearance'
+import {Reference} from '../src/reference'
 import {Scenario} from '../src/scenario'
 import mm = require('mm')
 import {MessageType} from '../src/messages'
+import { EventEmitter } from 'events';
 
 class MyReference extends Reference {
     hello(world:string){
@@ -77,6 +78,58 @@ describe('Reference', () => {
                 done();
             })
             mm.restore();            
-        })
+        });
     });
+
+    describe('$handleResult', () => {
+        var message, emitter:EventEmitter, ref;
+        beforeEach(() => {
+            emitter = new EventEmitter();
+            mm(Scenario, 'sendMessage', function(msg){
+                message = msg;
+                emitter.emit('message', msg);
+            })
+            ref = new MyReference();
+        })
+
+        afterEach(() => {
+            mm.restore();
+        })            
+         
+        it('resolves result', (done) => {
+            emitter.on('message', function(msg){
+                setImmediate(() => ref.$handleResult({
+                    from: msg.to,
+                    to: msg.from,
+                    type: MessageType.result,
+                    reqid: msg.reqid,
+                    result: 'world'
+                }));
+            });
+
+            ref.hello('world').then((res) => {
+                expect(res).to.eq('world')
+                done()
+            });
+        });
+    });
+
+    describe('$handleEvent', () => {
+        beforeEach(() => {
+            this.ref = new MyReference();
+        })
+        it('emit events', (done) => {
+            this.ref.on('Test', (data) => {
+                expect(data).to.eq('Hello, World')
+                done();
+            })
+            this.ref.$handleEvent({
+                type: MessageType.event,
+                from: 'test',
+                to: 'test2',
+                name: 'Test',
+                data: 'Hello, World'
+            });
+        });
+    });    
 })

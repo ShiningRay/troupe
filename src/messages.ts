@@ -47,7 +47,7 @@ export interface ErrorMessage extends Message {
     reqid: number;
     name: string;
     message: string;
-    stack: string;
+    stack?: string;
 }
 
 

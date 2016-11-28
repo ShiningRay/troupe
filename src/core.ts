@@ -1,6 +1,5 @@
 import shortid = require('shortid');
 import {Registry} from './registry';
-import { MessageDispatcher } from './dispatcher';
 
 
 export interface Ref {
