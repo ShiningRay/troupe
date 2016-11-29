@@ -1,8 +1,11 @@
-import { Scenario } from './scenario';
+import * as shortid from 'shortid';
+import {resolve} from './core';
+import {call} from './rpc';
+import {Scenario} from './scenario';
 import { EventEmitter } from 'events';
-import { Stage } from './stage';
+import {Stage} from './stage';
 import * as Promise from 'bluebird';
-import { MessageType, ResultMessage, ErrorMessage, EventMessage, InvocationMessage } from './messages';
+import { MessageType, InvocationMessage } from './messages';
 
 interface RequestSpec {
     resolve: Function;
@@ -18,6 +21,12 @@ export abstract class Reference extends EventEmitter {
     public $id: any = '';
     public $target: any;
     public readonly $stage: Stage;
+
+    constructor(target){
+        super();
+        this.$id = shortid.generate();
+        this.$target = target;
+    }
 
     private __requests: { [id: number]: RequestSpec } = {};
     private __reqId: number = 0;

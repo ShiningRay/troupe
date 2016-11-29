@@ -13,6 +13,7 @@ export interface Message {
     from: any;
     to: any;
     extension?: any;
+    hop?: number;
     timestamp?: number;
 }
 

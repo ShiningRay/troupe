@@ -28,7 +28,7 @@ describe('Reference', () => {
     describe('#sends message', () => {
         it('resolve result', (done) => {
             var called;
-            var ref = new MyReference();
+            var ref = new MyReference('abc');
             mm(Scenario, 'sendMessage', (m) => {
                 expect(m.reqid).to.be.a('number')
                 expect(m.type).to.eql(MessageType.invocation)
@@ -53,7 +53,7 @@ describe('Reference', () => {
         });
         it('handles error', (done) => {
             var called;
-            var ref = new MyReference();
+            var ref = new MyReference('abc');
             mm(Scenario, 'sendMessage', (m) => {
                 expect(m.reqid).to.be.a('number')
                 expect(m.type).to.eql(MessageType.invocation)
@@ -89,7 +89,7 @@ describe('Reference', () => {
                 message = msg;
                 emitter.emit('message', msg);
             })
-            ref = new MyReference();
+            ref = new MyReference('abc');
         })
 
         afterEach(() => {
@@ -116,7 +116,7 @@ describe('Reference', () => {
 
     describe('$handleEvent', () => {
         beforeEach(() => {
-            this.ref = new MyReference();
+            this.ref = new MyReference('abc');
         })
         it('emit events', (done) => {
             this.ref.on('Test', (data) => {
