@@ -1,0 +1,6 @@
+/.troupe/
+*.gem
+/Gemfile.lock
+/coverage/
+/.DS_Store
+/tmp/
