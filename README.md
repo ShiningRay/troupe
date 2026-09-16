@@ -113,6 +113,8 @@ bundle exec rake test   # 78 runs
 
 路线图（见 [DESIGN_NOTES.md](DESIGN_NOTES.md)）：Postgres 共享 PropStore、BoxOffice、Booth、热重载/热替换（Ruby 无 `setPrototypeOf`，L1/L2 需另设计）、Show 跨节点转发、Extra。
 
+**开发复盘与已知问题**（线程模型容量、PStore 全量写、Improv 交错粒度偏差、与 Ruby 理念的摩擦、对原设计文档歧义的决定）见 [DESIGN_REVIEW.md](DESIGN_REVIEW.md)——含优先级与修法。
+
 ## 已知边界
 
 - **单个热点 Actor 只有一个串行通道**：加 Stage 只能分摊不同 Actor 的负载（容量事实，DESIGN §5.3）

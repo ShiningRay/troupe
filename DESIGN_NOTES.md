@@ -1,6 +1,7 @@
 # DESIGN_NOTES —— Troupe.js → Ruby 的设计适配
 
 > 本文记录 Ruby 版相对 Troupe.js（DESIGN.md v2 / PLAN.md v4）的每一个重要设计映射与取舍。语义承诺以原文档为准；这里只讲"在 Ruby 里怎么成立"。
+> 已知问题、与 Ruby 理念的冲突及优先级路线见 [DESIGN_REVIEW.md](DESIGN_REVIEW.md)。
 
 ## 1. 执行模型：事件循环 → 每 Cell 一条调度线程
 

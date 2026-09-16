@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/ShiningRay/troupe"
   s.license = "MIT"
   s.required_ruby_version = ">= 3.1"
-  s.files = Dir["lib/**/*.rb"] + %w[bin/troupe README.md DESIGN_NOTES.md LICENSE]
+  s.files = Dir["lib/**/*.rb"] + %w[bin/troupe README.md DESIGN_NOTES.md DESIGN_REVIEW.md LICENSE]
   s.bindir = "bin"
   s.executables = ["troupe"]
   s.add_development_dependency "minitest", "~> 5.0"
