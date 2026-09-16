@@ -133,21 +133,31 @@ module Troupe
       @lock = Mutex.new
     end
 
-    def emit(event)
+    # 调用方守卫：sample=0 时连事件哈希都不该构造（热路径零成本）。
+    # 也支持 block 形式——只有事件真的会被采到才构造。
+    def sampled?
+      @sample.positive?
+    end
+
+    def emit(event = nil)
+      return unless sampled?
       return if @sample < 1.0 && rand >= @sample
 
-      size = event.sum { |k, v| k.to_s.bytesize + v.to_s.bytesize }
+      event = yield unless event
+      size = 128 + event.size * 64 # 近似字节数：逐字段 to_s 在热路径上太贵
       @lock.synchronize do
         old = @buf[@idx]
-        @bytes -= old_bytes(old) if old
+        @bytes -= old ? (128 + old.size * 64) : 0
         @buf[@idx] = event
         @bytes += size
         @idx = (@idx + 1) % @capacity
         @count += 1
         while @bytes > @budget # 预算超限自动降采样：丢最老
-          @buf[(@idx - @count) % @capacity] = nil
+          oldest = (@idx - @count) % @capacity
+          evicted = @buf[oldest]
+          @buf[oldest] = nil
           @count -= 1
-          @bytes -= MAX_EVENT_BYTES / 2 # 近似回收，防 OOM
+          @bytes -= evicted ? (128 + evicted.size * 64) : 0
         end
         @subs.each do |s|
           begin
@@ -200,10 +210,6 @@ module Troupe
     end
 
     private
-
-    def old_bytes(ev)
-      ev ? ev.sum { |k, v| k.to_s.bytesize + v.to_s.bytesize } : 0
-    end
 
     def matches?(filter, ev)
       return true if filter.nil? || filter.empty?

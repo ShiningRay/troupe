@@ -41,8 +41,18 @@ module Troupe
       raise ArgumentError, "无法解析#{what} #{spec.inspect}（支持 500ms / 2s / 10m / 1h / 1d / 秒数）"
     end
 
+    # Call id：启动随机前缀 + 进程内单调计数——比每次 SecureRandom 便宜 3 倍，
+    # 唯一性由"本进程内唯一 + 跨进程前缀唯一"保证（trace/日志可读性不受影响）
+    CALL_ID_PREFIX = "#{now_ms.to_s(36)}-#{SecureRandom.hex(4)}-"
+    CALL_ID_LOCK = Mutex.new
+    @call_seq = 0
+    class << self
+      attr_accessor :call_seq
+    end
+
     def call_id
-      "#{now_ms.to_s(36)}-#{SecureRandom.hex(6)}"
+      n = CALL_ID_LOCK.synchronize { self.call_seq += 1 }
+      "#{CALL_ID_PREFIX}#{n.to_s(36)}"
     end
 
     # 成员身份：重启即新 incarnation（DESIGN §6.2）

@@ -50,7 +50,8 @@ module Troupe
     end
 
     def key
-      [@namespace, @role_id, @stage_name]
+      # namespace/role_id/stage_name 初始化后不可变，可安全记忆化（每次派发都要做表查找）
+      @key ||= [@namespace, @role_id, @stage_name]
     end
 
     def expired?(now_ms = Util.now_ms)
@@ -63,8 +64,21 @@ module Troupe
       [0.0, (@deadline_ms - Util.now_ms) / 1000.0].max
     end
 
+    # 结构化近似（热路径每次 push 都要估字节量；inspect 太贵，用类型化估算替代）
     def approx_bytes
-      @approx_bytes ||= 128 + @method.to_s.bytesize + args.sum { |a| a.inspect.bytesize }
+      @approx_bytes ||= 128 + @method.to_s.bytesize + args.sum { |a| est_size(a, 2) }
+    end
+
+    private
+
+    def est_size(v, depth)
+      case v
+      when String then 32 + v.bytesize
+      when Numeric, Symbol, NilClass, TrueClass, FalseClass then 16
+      when Array then depth.zero? ? 64 : 40 + v.sum { |e| est_size(e, depth - 1) }
+      when Hash then depth.zero? ? 256 : 64 + v.size * 96
+      else 256
+      end
     end
   end
 

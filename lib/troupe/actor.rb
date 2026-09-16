@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "set"
+
 require_relative "util"
 
 module Troupe
@@ -86,12 +88,31 @@ module Troupe
         @call_board_limit || DEFAULT_CALL_BOARD_LIMIT
       end
 
-      # RPC 白名单 = 本类自定义的 public 实例方法 − 生命周期钩子。
-      # 接收端始终校验：这是安全边界，不依赖调用方类型面（DESIGN §6.1）。
-      def rpc_methods
-        validate_annotations!
-        @rpc_methods ||= (public_instance_methods(false) - LIFECYCLE_METHODS).sort.freeze
+    # RPC 白名单 = 本类自定义的 public 实例方法 − 生命周期钩子。
+    # 接收端始终校验：这是安全边界，不依赖调用方类型面（DESIGN §6.1）。
+    def rpc_methods
+      validate_annotations!
+      @rpc_methods ||= begin
+        methods = (public_instance_methods(false) - LIFECYCLE_METHODS).sort.freeze
+        @rpc_set = methods.to_set.freeze
+        methods
       end
+    end
+
+    # 热路径 O(1) 白名单校验（Agent 派发与接收端 validate 每次调用都查）
+    def valid_rpc?(method)
+      rpc_methods
+      @rpc_set.include?(method.to_sym)
+    end
+
+    # arity 记忆化：validate_call! 每次调用都要查，instance_method 反射不便宜。
+    # 注解校验保证"先定义再标注/注册"，注册后方法集不变，缓存安全。
+    def rpc_arity(method)
+      cache = (@rpc_arities ||= {})
+      return cache[method] if cache.key?(method)
+
+      cache[method] = instance_method(method).arity
+    end
 
       # 标注校验延迟到注册/首次使用（DSL 顺序自由），form() 时尽早报错（§1.3 错误必须响）
       def validate_annotations!
