@@ -63,21 +63,118 @@ module Troupe
     end
   end
 
+  # 标注（improv）调用执行器：可成长的线程池。
+  # 语义与"每调用一线程"完全一致——忙时按需扩容、并发无上限（不存在池满死锁，
+  # 这是与固定池的本质区别：标注方法可能同步 cast 回同一 Cell 形成等待环）；
+  # 收益在稳态：空闲线程被复用，不再为每个调用付线程创建/销毁成本。
+  # 生命周期：Troupe#shutdown! 调 stop!；进程退出另有 at_exit 兜底。
+  class ImprovPool
+    def initialize(max_idle: 32)
+      @max_idle = max_idle
+      @mutex = Mutex.new
+      @idle = []
+      @stopped = false
+      # 兜底：脚本未显式 shutdown! 时，保证空闲 worker 不挂住进程退出
+      # （cannot use finalizer：闭包引用 self 会导致池永不可回收）
+      at_exit { stop! }
+    end
+
+    def perform(&task)
+      chan = @mutex.synchronize { @stopped ? nil : @idle.pop }
+      unless chan
+        chan = Queue.new
+        spawn_worker(chan)
+      end
+      chan << task
+      nil
+    end
+
+    def stop!
+      chans = @mutex.synchronize do
+        @stopped = true
+        idle = @idle
+        @idle = []
+        idle
+      end
+      chans.each { |q| q << :stop }
+      nil
+    end
+
+    private
+
+    def spawn_worker(chan)
+      t = Thread.new { worker_loop(chan) }
+      begin
+        t.name = "troupe-improv-worker"
+      rescue StandardError
+        nil
+      end
+      t
+    end
+
+    def worker_loop(chan)
+      loop do
+        task = chan.pop
+        break if task.equal?(:stop)
+
+        begin
+          task.call
+        rescue StandardError => e
+          Log.error("improv worker 任务异常：#{e.class}: #{e.message}")
+        end
+        # 归还到空闲池（满了或已停机则线程自然退出）
+        keep = @mutex.synchronize do
+          if !@stopped && @idle.size < @max_idle
+            @idle << chan
+            true
+          else
+            false
+          end
+        end
+        break unless keep
+      end
+    end
+  end
+
   # 舞台监督（StageManager，DESIGN §5）：每 (role, stageName) 一个 Cell；
   # Cell 内默认严格串行——上一 Turn settle 前不取下一 Call。
+  #
+  # 调度模型（config.dispatcher）：
+  #   * :thread_per_cell（默认）——Cell 首次接单时 spawn 专属调度线程；
+  #   * :shared——SharedDispatcherPool 的 M 条线程多路复用全部 Cell（见 dispatcher_pool.rb）。
+  #
+  # @cells 访问采用锁分段（借鉴 concurrent-ruby Concurrent::Map 的 striped lock 设计）：
+  # 每 key 哈希到 16 段之一，派发热路径只取一段锁；全量快照/停机按段序依次取锁。
+  # 锁嵌套纪律（防死锁）：@changed_lock/@count_lock 内可取 stripe，stripe 内不得取它们。
   class StageManager
-    attr_reader :troupe
+    attr_reader :troupe, :shared_dispatcher
+
+    STRIPES = 16
 
     def initialize(troupe)
       @troupe = troupe
       @cells = {}
-      @lock = Mutex.new
+      @stripes = Array.new(STRIPES) { Mutex.new }
+      @count_lock = Mutex.new
+      @cell_count_n = 0
+      @changed_lock = Mutex.new
       @changed = ConditionVariable.new
       @budget = ByteBudget.new(troupe.config.queue_bytes_limit)
+      @shared_dispatcher =
+        if troupe.config.dispatcher == :shared
+          pool = SharedDispatcherPool.new(threads: troupe.config.dispatcher_threads)
+          pool.start_sweeper(self)
+          pool
+        end
     end
 
     def config
       @troupe.config
+    end
+
+    # key → 锁段（Ruby 的 % 对正模数恒非负）
+    def stripe_for(key)
+      @stripes[key.hash % STRIPES]
     end
 
     def repertoire
@@ -107,11 +204,13 @@ module Troupe
         kind = e.is_a?(TroupeError) ? e.kind : :business
         dur = Util.mono - (t0 ||= Util.mono)
         @troupe.metrics.observe(call.role_id, kind, dur)
-        @troupe.trace.emit(
-          "at" => Util.now_ms, "stage" => @troupe.advertise, "from" => (call.from_stage || call.source.to_s),
-          "role" => call.role_id, "stageName" => call.stage_name, "method" => call.method.to_s,
-          "durationMs" => (dur * 1000).round(3), "outcome" => kind.to_s, "callId" => call.call_id
-        )
+        @troupe.trace.emit do
+          {
+            "at" => Util.now_ms, "stage" => @troupe.advertise, "from" => (call.from_stage || call.source.to_s),
+            "role" => call.role_id, "stageName" => call.stage_name, "method" => call.method.to_s,
+            "durationMs" => (dur * 1000).round(3), "outcome" => kind.to_s, "callId" => call.call_id
+          }
+        end
       end
       raise
     end
@@ -120,7 +219,7 @@ module Troupe
     # 不可经普通 RPC 调用；internal 调用只能由框架在进程内构造。
     def validate_call!(klass, call)
       raise CallRejectedError, "参数必须是数组" unless call.args.is_a?(Array)
-      if !call.internal? && call.method.to_s.start_with?("__")
+      if !call.internal? && call.method.start_with?("__")
         raise UnknownMethodError, "方法 #{call.method} 不可调用：双下划线保留给框架内部"
       end
       unless call.internal? || klass.valid_rpc?(call.method)
@@ -131,7 +230,7 @@ module Troupe
 
       return if call.internal? || call.block?
 
-      arity = klass.instance_method(call.method).arity
+      arity = klass.rpc_arity(call.method)
       n = call.args.size
       required = arity >= 0 ? arity : -arity - 1
       ok = arity >= 0 ? n == arity : n >= required
@@ -144,7 +243,18 @@ module Troupe
       loop do
         check_activation_limit
         key = call.key
-        cell = @lock.synchronize { @cells[key] ||= Cell.new(self, klass, call.namespace, call.role_id, call.stage_name) }
+        cell, created =
+          stripe_for(key).synchronize do
+            c = @cells[key]
+            if c
+              [c, false]
+            else
+              c = Cell.new(self, klass, call.namespace, call.role_id, call.stage_name)
+              @cells[key] = c
+              [c, true]
+            end
+          end
+        @count_lock.synchronize { @cell_count_n += 1 } if created
         case cell.offer(call)
         when :accepted then return cell
           # :draining / :invalid —— 等待旧实例从在场表消失后重新解析（重新激活，DESIGN §5.2）
@@ -154,41 +264,71 @@ module Troupe
     end
 
     def check_activation_limit
-      @lock.synchronize do
-        if @cells.size >= config.activation_limit
-          raise BackpressureError, "在场激活数超限（#{@cells.size} >= #{config.activation_limit}）：过载显式拒绝（DESIGN §5.3）"
-        end
-      end
+      n = @count_lock.synchronize { @cell_count_n }
+      return unless n >= config.activation_limit
+
+      raise BackpressureError, "在场激活数超限（#{n} >= #{config.activation_limit}）：过载显式拒绝（DESIGN §5.3）"
     end
 
     def wait_cell_removed(cell, call)
       deadline = call.deadline_ms
-      key = call.key
-      @lock.synchronize do
-        while @cells[key].equal?(cell)
+      key = cell.cell_key
+      @changed_lock.synchronize do
+        while stripe_for(key).synchronize { @cells[key] }.equal?(cell)
           if deadline && deadline <= Util.now_ms
             raise CallTimeoutError, "等待前一个实例排空超时：结果未知（DESIGN §5.2：排空期间新请求等待）"
           end
           remaining = deadline ? (deadline - Util.now_ms) / 1000.0 : 1.0
-          @changed.wait(@lock, remaining)
+          @changed.wait(@changed_lock, remaining)
         end
       end
     end
 
     def remove_cell(cell)
-      @lock.synchronize do
-        @cells.delete_if { |_k, c| c.equal?(cell) }
-        @changed.broadcast
+      key = cell.cell_key
+      removed = false
+      stripe_for(key).synchronize do
+        c = @cells[key]
+        return unless c&.equal?(cell)
+
+        @cells.delete(key)
+        removed = true
       end
+      return unless removed
+
+      @count_lock.synchronize { @cell_count_n -= 1 }
+      @changed_lock.synchronize { @changed.broadcast }
       nil
     end
 
     def cell_count
-      @lock.synchronize { @cells.size }
+      @count_lock.synchronize { @cell_count_n }
     end
 
+    # 全量快照（admin/停机/sweeper 用，非热路径）：按固定段序取全部段锁后单次迭代，
+    # 避免逐段各迭代全表造成重复；与 wait_cell_removed（changed_lock → 单段）锁序一致，无死锁
     def cells_snapshot
-      @lock.synchronize { @cells.values.dup }
+      @stripes.each(&:lock)
+      begin
+        @cells.values
+      ensure
+        @stripes.each(&:unlock)
+      end
+    end
+
+    # 共享模式：钝化到期扫描（SharedDispatcherPool sweeper 周期调用）。
+    # request_drain! 在共享模式下自带入队，排空交由调度线程完成。
+    def sweep_intermissions!
+      cells_snapshot.each do |c|
+        c.request_drain!(:intermission) if c.idle_due?
+      end
+      nil
+    end
+
+    # 停机收尾：停掉共享调度池与 sweeper（troupe.shutdown! 在 stage_manager.shutdown 之后调用）
+    def stop_shared_dispatcher!
+      @shared_dispatcher&.stop!
+      nil
     end
 
     def queued_bytes
@@ -197,7 +337,8 @@ module Troupe
 
     # 管理下场（Director `off`，DESIGN §11.1）：排空 + offStage + saveProps
     def admin_off(role_id, stage_name, timeout: 10.0)
-      cell = @lock.synchronize { @cells[[config.namespace, role_id, stage_name]] }
+      key = [config.namespace, role_id, stage_name]
+      cell = stripe_for(key).synchronize { @cells[key] }
       return false unless cell
 
       cell.request_drain!(:admin)
@@ -206,7 +347,8 @@ module Troupe
     end
 
     def inspect_cell(role_id, stage_name)
-      cell = @lock.synchronize { @cells[[config.namespace, role_id, stage_name]] }
+      key = [config.namespace, role_id, stage_name]
+      cell = stripe_for(key).synchronize { @cells[key] }
       return nil unless cell
 
       cell.detail
@@ -265,6 +407,7 @@ module Troupe
   # 生命周期状态机（未激活/激活中/运行中/排空中/失效，DESIGN §5.2）+ CallBoard + 串行通道。
   # Ruby 适配：Node 的"事件循环 + Promise settle"映射为"每 Cell 一条调度线程"，
   # 严格串行 = 调度线程逐条执行；响应期限与执行占用分离 = 等待超时不中断执行线程。
+  # dispatcher: :shared 时改由共享调度池多路复用（严格串行由 enqueued 令牌保证）。
   class Cell
     attr_reader :troupe, :role_class, :namespace, :role_id, :stage_name, :state
     attr_accessor :revision, :fencing_token
@@ -300,10 +443,21 @@ module Troupe
       @poisoned = false
       @cues = {}
       @cue_lock = Mutex.new
+      # 共享调度：Cell 持有 enqueued 令牌 = 已在共享池就绪队列中（防重复入队/并发处理）
+      @shared_dispatcher = manager.shared_dispatcher
+      @enqueued = false
+      @cell_key = [@namespace, @role_id, @stage_name]
+      # Cell 级 metrics 句柄：热路径每次 turn 都要 observe，
+      # 走 troupe.metrics.observe 每次多付一把锁 + 哈希查找
+      @role_metrics = @troupe.metrics.for_role(@role_id)
     end
 
     def label
       "#{@role_id}/#{@stage_name}"
+    end
+
+    def cell_key
+      @cell_key
     end
 
     # ---- 调用进入 ----
@@ -316,7 +470,11 @@ module Troupe
         return :invalid if @state == :invalid
 
         @board.push!(call)
-        spawn_dispatcher
+        if @shared_dispatcher
+          enqueue_locked!
+        else
+          spawn_dispatcher
+        end
         :accepted
       end
     end
@@ -332,10 +490,35 @@ module Troupe
       end
     end
 
+    # @lock 持有时调用：置 enqueued 令牌并投递到共享池（幂等）
+    def enqueue_locked!
+      return if @enqueued
+
+      @enqueued = true
+      @shared_dispatcher.push(self)
+      nil
+    end
+
+    # 共享模式对外入队口（sweeper / 停机排空用）；thread_per_cell 模式为 no-op
+    def poke!
+      return unless @shared_dispatcher
+
+      @lock.synchronize { enqueue_locked! }
+      nil
+    end
+
+    # 标注（improv）调用：提交到可复用的线程池，不再每调用新建线程
+    def spawn_annotated(call)
+      @turn_lock.synchronize { @annotated += 1 }
+      @troupe.improv_pool.perform { run_turn(call, annotated: true) }
+    end
+
     def request_drain!(reason)
       @lock.synchronize do
         @stop_requested = true
         @drain_reason ||= reason
+        # 共享模式：排空请求自带入队——调度线程取出后看到 stop_requested 即执行 drain!
+        enqueue_locked! if @shared_dispatcher
       end
       @board.wake!
     end
@@ -354,10 +537,16 @@ module Troupe
     end
 
     def alive?
+      return !finished? if @shared_dispatcher
+
       @thread&.alive? ? true : false
     end
 
+    # 共享模式：不为单个 Cell 强杀共享调度线程（语义差异见 SharedDispatcherPool 注释），
+    # 宽限期内未排空只记录日志放弃（与 thread_per_cell 的 kill! 不同）。
     def kill!
+      return if @shared_dispatcher
+
       @thread&.kill
     end
 
@@ -470,6 +659,72 @@ module Troupe
       end
     end
 
+    # ---- 共享调度批次（dispatcher: :shared，只由 SharedDispatcherPool 线程调用） ----
+
+    # 处理当前排队的 Call 直到排空 / 停机 / 失效，然后归还 enqueued 令牌。
+    # enqueued 令牌保证同一 Cell 同时至多在一个调度线程上处理——严格串行不变。
+    def run_shared_batch(_pool)
+      loop do
+        if @stop_requested
+          drain!(@drain_reason)
+          finish_shared!
+          return
+        end
+
+        call = @board.pop(timeout: 0)
+        if call.nil?
+          release_shared!
+          return
+        end
+
+        next if settle_expired!(call)
+
+        @last_activity = Util.mono
+        begin
+          activate! unless running?
+          execute_turn(call)
+        rescue StandardError => e
+          # 当前 Call 先 settle（不悬挂调用方），再失效并排空队列（等价 run_loop 的外层救援）
+          call.box.settle_error(e) unless call.box.settled?
+          Log.error("#{label} 调度批次异常：#{e.class}: #{e.message} #{e.backtrace&.first}")
+          fail_all_queued!(InvalidActorStateError.new("#{label} 调度器异常退出：#{e.message}"))
+          invalidate!
+          finish_shared!
+          return
+        end
+
+        next unless @poisoned
+
+        # 保存失败/冲突：实例失效，不继续使用失效或未提交状态（DESIGN §7.3）
+        fail_all_queued!(InvalidActorStateError.new("#{label} Props 提交失败，实例已失效：下次调用从最后已提交快照继续"))
+        invalidate!
+        finish_shared!
+        return
+      end
+    end
+
+    # 归还处理令牌：清 @enqueued；期间又有 Call 到达则重新入队（置位与检查同在 @lock 内，不丢唤醒）
+    def release_shared!
+      @lock.synchronize do
+        @enqueued = false
+        if @board.depth.positive? && !@stop_requested
+          @enqueued = true
+          @shared_dispatcher.push(self)
+        end
+      end
+      nil
+    end
+
+    # 共享批次结束（drain/失效/异常）后的收尾，等价 thread_per_cell run_loop 的 ensure
+    def finish_shared!
+      @manager.remove_cell(self)
+      @lock.synchronize do
+        @finished = true
+        @state_cv.broadcast
+      end
+      nil
+    end
+
     def finished?
       @lock.synchronize { @finished ? true : false }
     end
@@ -482,7 +737,7 @@ module Troupe
       return false unless call.expired?
 
       call.box.settle_error(CallTimeoutError.new("排队已过期：未开始执行、无副作用，已拒绝（DESIGN §5.1）"))
-      @troupe.metrics.observe(@role_id, :rejected, 0.0)
+      @role_metrics.observe(:rejected, 0.0)
       true
     end
 
@@ -610,23 +865,11 @@ module Troupe
         while @annotated.positive?
           if call.expired?
             call.box.settle_error(CallTimeoutError.new("等待交错在飞请求结束超时：结果未知（DESIGN §5.4）"))
-            @troupe.metrics.observe(@role_id, :rejected, 0.0)
+            @role_metrics.observe(:rejected, 0.0)
             return
           end
           @turn_cv.wait(@turn_lock, 0.02)
         end
-      end
-    end
-
-    def spawn_annotated(call)
-      @turn_lock.synchronize { @annotated += 1 }
-      Thread.new do
-        begin
-          Thread.current.name = "troupe-#{@role_id}-#{@stage_name}-annotated"
-        rescue StandardError
-          nil
-        end
-        run_turn(call, annotated: true)
       end
     end
 
@@ -658,12 +901,14 @@ module Troupe
         call.box.settle_ok(copy_result(call, result))
         outcome = :ok
       end
-      @troupe.metrics.observe(@role_id, outcome, dur)
-      @troupe.trace.emit(
-        "at" => Util.now_ms, "stage" => @troupe.advertise, "from" => (call.from_stage || call.source.to_s),
-        "role" => @role_id, "stageName" => @stage_name, "method" => (call.block? ? "cue:#{call.method}" : call.method.to_s),
-        "durationMs" => (dur * 1000).round(3), "outcome" => outcome.to_s, "callId" => call.call_id
-      )
+      @role_metrics.observe(outcome, dur)
+      @troupe.trace.emit do
+        {
+          "at" => Util.now_ms, "stage" => @troupe.advertise, "from" => (call.from_stage || call.source.to_s),
+          "role" => @role_id, "stageName" => @stage_name, "method" => (call.block? ? "cue:#{call.method}" : call.method.to_s),
+          "durationMs" => (dur * 1000).round(3), "outcome" => outcome.to_s, "callId" => call.call_id
+        }
+      end
     end
 
     def copy_result(call, result)

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "etc"
 require_relative "util"
 
 module Troupe
@@ -12,7 +13,8 @@ module Troupe
                   :local_call_by_reference, :admin_token, :cluster_token,
                   :prop_store_spec, :cue_store_spec, :props_dir,
                   :ownership, :ownership_lease, :ownership_acquire_timeout,
-                  :trace_sample, :trace_capacity
+                  :trace_sample, :trace_capacity, :improv_idle, :call_timeout_s,
+                  :dispatcher, :dispatcher_threads
 
     def self.resolve(opts = {})
       opts = opts.transform_keys(&:to_sym)
@@ -48,6 +50,21 @@ module Troupe
       cfg.ownership_acquire_timeout = opts[:ownership_acquire_timeout] || "10s"
       cfg.trace_sample = Float(opts[:trace_sample] || 1.0)
       cfg.trace_capacity = Integer(opts[:trace_capacity] || 10_000)
+      cfg.improv_idle = Integer(opts[:improv_idle] || 32)
+
+      # 调度模型（DESIGN §5.1 Ruby 适配）：:thread_per_cell（默认，每 Cell 一条调度线程，
+      # 阻塞 Turn 隔离性最好）| :shared（M 条共享调度线程多路复用 Cell，激活/内存成本大降，
+      # 语义差异见 SharedDispatcherPool 注释）
+      cfg.dispatcher = opts[:dispatcher] || env["TROUPE_DISPATCHER"]&.to_sym || :thread_per_cell
+      unless %i[thread_per_cell shared].include?(cfg.dispatcher)
+        raise ConfigError, "未知 dispatcher：#{cfg.dispatcher.inspect}（支持 :thread_per_cell / :shared）"
+      end
+      cfg.dispatcher_threads =
+        Integer(opts[:dispatcher_threads] || env["TROUPE_DISPATCHER_THREADS"] || [Etc.nprocessors, 8].min)
+
+      # 热路径预解析：dispatch_call 每次调用都要用，不能每次都做字符串解析
+      require_relative "util"
+      cfg.call_timeout_s = Util.parse_duration(cfg.call_timeout, "call 超时")
 
       # production 前提（DESIGN §8.2）：显式 advertiseAddress
       if cfg.mode == "production" && cfg.transport_enabled && cfg.advertise.nil?

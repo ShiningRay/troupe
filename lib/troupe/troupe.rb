@@ -19,6 +19,7 @@ require_relative "cluster/transport"
 require_relative "cluster/hash_ring"
 require_relative "cues/cue_store"
 require_relative "cues/scheduler"
+require_relative "dispatcher_pool"
 require_relative "director"
 
 module Troupe
@@ -29,7 +30,7 @@ module Troupe
   class Troupe
     attr_reader :config, :repertoire, :stage_manager, :prop_store, :cue_store,
                 :cue_scheduler, :roster, :playbill, :transport, :trace, :metrics,
-                :events, :incarnation
+                :events, :incarnation, :improv_pool
 
     def self.form(*args, **kwargs)
       opts = (args.first.is_a?(Hash) ? args.first : {}).merge(kwargs)
@@ -48,6 +49,7 @@ module Troupe
       @events = EventBus.new
       @metrics = Metrics.new
       @trace = TraceBus.new(capacity: config.trace_capacity, sample: config.trace_sample)
+      @improv_pool = ImprovPool.new(max_idle: config.improv_idle)
       @repertoire = build_repertoire
       @prop_store = build_prop_store
       @cue_store = build_cue_store
@@ -107,7 +109,8 @@ module Troupe
     def dispatch_call(role_class, stage_name, method, args, timeout)
       raise CallRejectedError, "Troupe 正在停演：拒绝新 Call" if @stopping
 
-      timeout_s = Util.parse_duration(timeout || @config.call_timeout, "call 超时")
+      # 默认超时用 Config 预解析值；显式传入的个别超时才走字符串解析
+      timeout_s = timeout ? Util.parse_duration(timeout, "call 超时") : @config.call_timeout_s
       call = Call.new(
         namespace: @config.namespace, role_id: role_class.role_id, stage_name: stage_name,
         method: method, args: args, deadline_ms: Util.now_ms + (timeout_s * 1000).to_i,
@@ -166,8 +169,10 @@ module Troupe
       @cue_scheduler&.stop
       @hb_sleeper&.cancel
       @stage_manager.shutdown(grace_s)
+      @stage_manager.stop_shared_dispatcher! # 共享调度线程不停会让进程退出挂起
       @roster&.stop
       @prop_store&.close
+      @improv_pool.stop! # 空闲 worker 不停会让进程退出挂起
       Log.info("Troupe 已停演（#{@config.namespace}）")
     end
 

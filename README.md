@@ -99,6 +99,7 @@ bundle exec rake test   # 78 runs
 | PropStore | PStore `./.troupe/props.pstore`（进程级持久）；`:memory` / `:sqlite`（需 sqlite3 gem） | `TROUPE_PROPS_DIR` / `TROUPE_PROPSTORE` |
 | 命名空间 | 当前目录名 | `TROUPE_NAMESPACE` |
 | Call 超时 / Intermission / Cue tick | 30s / 5m / 1s | — |
+| 调度模型 | `:thread_per_cell`（每 Cell 一条调度线程，阻塞隔离最好）；`:shared`（M=核数(≤8) 条共享调度线程多路复用 Cell，激活/内存成本大降：实测激活 ~×10、KB/Actor ~×17，代价：阻塞 Turn 占一条 worker、不支持 kill!、Intermission 秒级精度） | `TROUPE_DISPATCHER` / `TROUPE_DISPATCHER_THREADS` |
 | 优雅停机 | SIGTERM 由应用捕获后调 `troupe.shutdown!`；宽限 10s | `TROUPE_SHUTDOWN_GRACE` |
 | Director | 仅 loopback；远程需 token | `TROUPE_ADMIN_TOKEN` |
 | Rehearsal | `Troupe::Testing.rehearsal(actors: [...])` 全内存 | `TROUPE_ENV=test` |
