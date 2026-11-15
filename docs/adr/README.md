@@ -2,6 +2,12 @@
 
 ADR 用于冻结跨语言会互相影响的决定。每份 ADR 应包含背景、选项、决定、影响、验证和回退，不以后续代码默默改变语义。
 
+## 已接受
+
+| 编号 | 主题 | 实证 |
+|---|---|---|
+| [ADR-0007](0007-external-endpoint-layering.md) | 外部端点分层：core / transport / gateway / web 框架边界；新增伴生 shard troupe-gateway | [troupe-chat](https://github.com/ShiningRay/troupe-chat) 首个网关实现 |
+
 ## 待决
 
 | 编号 | 主题 | 前置条件 |
