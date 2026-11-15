@@ -10,6 +10,7 @@ Troupe 多语言实现的统一架构与路线图。主要对标 **Orleans 10.0*
 | [troupe-elixir](https://github.com/ShiningRay/troupe-elixir) | BEAM 单机核心，补生产容错 | [差距与路线](https://github.com/ShiningRay/troupe-elixir/blob/main/docs/ROADMAP.md) |
 | [troupe](https://github.com/ShiningRay/troupe)（Ruby） | 先修测试与存储基线 | [差距与路线](https://github.com/ShiningRay/troupe/blob/main/docs/ROADMAP.md) |
 | [troupe.cr](https://github.com/ShiningRay/troupe.cr) | Crystal 规划与脚手架 | [设计](https://github.com/ShiningRay/troupe.cr/blob/main/DESIGN.md) / [计划](https://github.com/ShiningRay/troupe.cr/blob/main/PLAN.md) |
+| [troupe-gateway](https://github.com/ShiningRay/troupe-gateway) | Crystal 伴生：外部端点传输桥（ADR-0007 L3） | [README](https://github.com/ShiningRay/troupe-gateway#readme) |
 | [troupe-bench-suite](https://github.com/ShiningRay/troupe-bench-suite) | 跨实现统一基准 | 场景与结果需版本化复核 |
 
 ## 文档

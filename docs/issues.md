@@ -37,4 +37,14 @@
 
 本轮只交付方案与脚手架，见 [DESIGN](https://github.com/ShiningRay/troupe.cr/blob/main/DESIGN.md) 和 [PLAN](https://github.com/ShiningRay/troupe.cr/blob/main/PLAN.md)。实际提交以仓库 main 为准。
 
+- [#1 Rehearsal(Manual) 上 typed Agent 阻塞缺警示（文档/易用性）](https://github.com/ShiningRay/troupe.cr/issues/1)
+- [#2 OutboxDispatcher 批量/后台派发建议](https://github.com/ShiningRay/troupe.cr/issues/2)——已由 [troupe-gateway](https://github.com/ShiningRay/troupe-gateway) 在消费侧先行落地，[跟进评论](https://github.com/ShiningRay/troupe.cr/issues/2#issuecomment-6897214063)
+
+## 首个外部消费者 — ShiningRay/troupe-chat
+
+[troupe-chat](https://github.com/ShiningRay/troupe-chat)：troupe.cr 房间 actor + [tessell](https://github.com/ShiningRay/tessell) 自绘 GUI 的聊天室，ADR-0007 的实证来源。发现的上游缺陷：
+
+- [tessell #52 GLBackend#draw_text 增量提交不渲染](https://github.com/ShiningRay/tessell/issues/52)
+- [tessell #53 Kit::Text#truncate 渲染 String::Builder 对象](https://github.com/ShiningRay/tessell/issues/53)
+
 本索引记录创建时状态，Issue 是否完成以对应仓库当前状态为准。
