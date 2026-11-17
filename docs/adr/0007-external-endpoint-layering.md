@@ -59,6 +59,12 @@ troupe-chat 需要把浏览器/桌面等**外部客户端**接入 troupe.cr acto
 
 - `troupe-gateway` 自带 spec：路由回调、会话元数据、Outbox 派发与去重、溢出策略（drop）、断线清理。
 - 外部消费者回归：troupe-chat 服务端改用 gateway 后，原 14 例 spec 与双客户端 E2E（互见/历史/presence/慢消费者）不退化。
+- **多语言化（2026-11-18）**：L3 契约已按同一移植矩阵在五语言落地——
+  [troupe-gateway-js](https://github.com/ShiningRay/troupe-gateway-js)（claim 型 OutboxSource + troupe-js PostgresOutboxStore 适配）、
+  [troupe-gateway-rb](https://github.com/ShiningRay/troupe-gateway-rb)（接 trouperb OutboxDispatcher）、
+  [troupe-gateway-go](https://github.com/ShiningRay/troupe-gateway-go)（逐 actor 轮询 troupe.OutboxStore）、
+  [troupe-gateway-elixir](https://github.com/ShiningRay/troupe-gateway-elixir)（内置 `OutboxSource` behaviour + ETS 源——troupe-elixir 核心暂无 Outbox，按裁决由伴生包内置，生产可换 claim/lease 型 PG 实现）。
+  各仓移植 Crystal spec 的 8 项行为矩阵并各自 CI 全绿；语义差异（并发模型/Outbox API/track 语义）见各仓 README「与 Crystal 版的差异」。
 
 ## 回退
 
