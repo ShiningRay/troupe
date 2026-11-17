@@ -1,19 +1,27 @@
-# Troupe Planning
+# Troupe
 
 Troupe 多语言实现的统一架构与路线图。主要对标 **Orleans 10.0** 的 silo runtime 语义，不以复制全部模块或 API 为目标。
 
-## 仓库
+**网站**：<https://shiningray.github.io/troupe/>
 
-| 实现 | 当前定位 | 本地方案 |
-|---|---|---|
-| [troupejs](https://github.com/ShiningRay/troupe-js)（私有） | TypeScript 主线，功能面最广 | [差距与路线](https://github.com/ShiningRay/troupe-js/blob/main/docs/ROADMAP.md) |
-| [troupe-elixir](https://github.com/ShiningRay/troupe-elixir) | BEAM 单机核心，补生产容错 | [差距与路线](https://github.com/ShiningRay/troupe-elixir/blob/main/docs/ROADMAP.md) |
-| [troupe](https://github.com/ShiningRay/troupe-rb)（Ruby） | 先修测试与存储基线 | [差距与路线](https://github.com/ShiningRay/troupe-rb/blob/main/docs/ROADMAP.md) |
-| [troupe.cr](https://github.com/ShiningRay/troupe-cr) | Crystal 规划与脚手架 | [设计](https://github.com/ShiningRay/troupe-cr/blob/main/DESIGN.md) / [计划](https://github.com/ShiningRay/troupe-cr/blob/main/PLAN.md) |
-| [troupe-gateway](https://github.com/ShiningRay/troupe-gateway) | Crystal 伴生：外部端点传输桥（ADR-0007 L3） | [README](https://github.com/ShiningRay/troupe-gateway#readme) |
-| [coin-rush-client](https://github.com/ShiningRay/coin-rush-client) | Coin Rush 浏览器客户端（零构建 Canvas，可连任意协议实现） | [README](https://github.com/ShiningRay/coin-rush-client#readme) |
-| [coin-rush-servers](https://github.com/ShiningRay/coin-rush-servers) | Coin Rush 服务器端五语言实现：TS/Crystal/Ruby/Elixir/Go | [README](https://github.com/ShiningRay/coin-rush-servers#readme) / [协议](https://github.com/ShiningRay/coin-rush-servers/blob/main/PROTOCOL.md) |
-| [troupe-bench-suite](https://github.com/ShiningRay/troupe-bench-suite) | 跨实现统一基准 | 场景与结果需版本化复核 |
+## 语言实现
+
+| 实现 | 语言 | 当前状态 | 入口 |
+|---|---|---|---|
+| [Troupe.js](https://github.com/ShiningRay/troupe-js) | TypeScript / Node.js | **主线**：M1–M11 与 P0–P3 全部交付（fencing 全路径、目录化路由、PG Cue/Stream/Outbox、混沌入 CI、golden fixtures、Node 22/24 × Linux/Windows × PG16 发布矩阵） | [ROADMAP](https://github.com/ShiningRay/troupe-js/blob/main/docs/ROADMAP.md) / [VERIFICATION](https://github.com/ShiningRay/troupe-js/blob/main/docs/VERIFICATION.md) |
+| [Troupe.go](https://github.com/ShiningRay/troupe-go) | Go | M0–M6 全交付：单机核心→PG 跨节点接管→TCP 集群→持久流→版本化目录/放置/再平衡→OTel/事件溯源/滚动升级，全仓 `-race` 绿 | [DESIGN](https://github.com/ShiningRay/troupe-go/blob/main/DESIGN.md) / [COMPATIBILITY](https://github.com/ShiningRay/troupe-go/blob/main/docs/COMPATIBILITY.md) |
+| [Troupe.cr](https://github.com/ShiningRay/troupe-cr) | Crystal | M0–M6 交付：PG Provider（`cross_node_safe`）+ TCP transport + 持久流 + 版本化 directory + OTel OTLP 零依赖导出，golden 对齐 | [DESIGN](https://github.com/ShiningRay/troupe-cr/blob/main/DESIGN.md) / [PLAN](https://github.com/ShiningRay/troupe-cr/blob/main/PLAN.md) |
+| [Troupe.rb](https://github.com/ShiningRay/troupe-rb) | Ruby | 运行时核心 M1–M4（租约/fencing、持久 Cue、持久流、Outbox/Inbox）+ M5 架构裁决文档；零 gem 依赖；多机接管未验证（[VERIFICATION](https://github.com/ShiningRay/troupe-rb/blob/main/docs/VERIFICATION.md) 明示） | [ROADMAP](https://github.com/ShiningRay/troupe-rb/blob/main/docs/ROADMAP.md) |
+| [Troupe.ex](https://github.com/ShiningRay/troupe-elixir) | Elixir | BEAM 移植单机核心（37 测试）：零第三方依赖、File/DETS Props、`:pg` Show、Director/CLI；生产容错待补 | [ROADMAP](https://github.com/ShiningRay/troupe-elixir/blob/main/docs/ROADMAP.md) |
+
+## 生态与配套
+
+| 仓库 | 定位 |
+|---|---|
+| [troupe-gateway](https://github.com/ShiningRay/troupe-gateway) | Crystal 伴生：外部端点传输桥（ADR-0007 L3） |
+| [coin-rush-client](https://github.com/ShiningRay/coin-rush-client) | Coin Rush 浏览器客户端（零构建 Canvas，可连任意协议实现） |
+| [coin-rush-servers](https://github.com/ShiningRay/coin-rush-servers) | Coin Rush 服务器端五语言实现：TS/Crystal/Ruby/Elixir/Go（[协议](https://github.com/ShiningRay/coin-rush-servers/blob/main/PROTOCOL.md)） |
+| [troupe-bench-suite](https://github.com/ShiningRay/troupe-bench-suite) | 跨实现统一基准（场景与结果需版本化复核） |
 
 ## 文档
 

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Troupe — Virtual Actor 框架（剧团隐喻）· 多语言家族</title>
+  <meta name="description" content="Troupe：对标 Microsoft Orleans 的 Virtual Actor 框架家族，TypeScript / Go / Crystal / Ruby / Elixir 五语言实现，共享同一套语义与验收口径。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8E%AD%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="hero">
+    <nav class="nav">
+      <span class="brand">🎭 Troupe</span>
+      <div class="nav-links">
+        <a href="#impl">语言实现</a>
+        <a href="#ecosystem">生态</a>
+        <a href="#principles">设计原则</a>
+        <a href="#docs">文档</a>
+        <a href="https://github.com/ShiningRay/troupe" class="nav-github">GitHub ↗</a>
+      </div>
+    </nav>
+    <div class="hero-body">
+      <p class="hero-kicker">Virtual Actor Framework Family</p>
+      <h1>Troupe <span class="hero-sub">剧团</span></h1>
+      <p class="hero-lede">
+        一组语义对标 <strong>Microsoft Orleans</strong> 的 <strong>Virtual Actor</strong> 框架：
+        Actor 永远存在、按需激活、空闲钝化——用<b>剧团隐喻</b>统一命名：
+        Stage（舞台）、Call（叫台）、Intermission（幕间）、Props（道具）、Cue（提示）、Show（演出）。
+        五种语言实现共享同一套语义与验收口径，不以复制 Orleans 全部 API 为目标。
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#impl">选择你的语言</a>
+        <a class="btn btn-ghost" href="#docs">阅读架构文档</a>
+      </div>
+      <p class="hero-meta">先正确，后功能 · 同一语义，本地 idiomatic API · 不承诺 exactly-once</p>
+    </div>
+  </header>
+
+  <main>
+    <section id="impl" class="section">
+      <h2>五语言实现</h2>
+      <p class="section-lede">每种实现遵循同一里程碑验收门禁；状态声明以各仓 <code>CI</code> 与验证文档为准。</p>
+      <div class="cards">
+
+        <article class="card card-featured">
+          <div class="card-head">
+            <span class="lang-tag ts">TypeScript</span>
+            <h3><a href="https://github.com/ShiningRay/troupe-js">Troupe.js</a></h3>
+            <span class="chip chip-main">主线</span>
+          </div>
+          <img class="ci-badge" src="https://github.com/ShiningRay/troupe-js/actions/workflows/ci.yml/badge.svg" alt="CI status" loading="lazy">
+          <p>M1–M11 与 Orleans 对齐计划 P0–P3 <b>全部交付</b>：功能面最广的参考实现。</p>
+          <ul>
+            <li>strict 串行 + 交错执行、所有权租约 + fencing 全路径反例闭合</li>
+            <li>目录化路由（缓存→回源→claim）、同地址重启恢复</li>
+            <li>PostgreSQL：PropStore CAS / CueStore（SKIP LOCKED）/ StreamStore + 事务性 Outbox·Inbox</li>
+            <li>3 节点混沌入 CI/nightly；协议 ADR + golden fixtures 跨语言锚点</li>
+            <li>发布矩阵：Node 22/24 × Linux/Windows × PG16</li>
+          </ul>
+          <div class="card-links">
+            <a href="https://github.com/ShiningRay/troupe-js/blob/main/docs/ROADMAP.md">ROADMAP</a>
+            <a href="https://github.com/ShiningRay/troupe-js/blob/main/docs/VERIFICATION.md">VERIFICATION</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <span class="lang-tag go">Go</span>
+            <h3><a href="https://github.com/ShiningRay/troupe-go">Troupe.go</a></h3>
+          </div>
+          <img class="ci-badge" src="https://github.com/ShiningRay/troupe-go/actions/workflows/ci.yml/badge.svg" alt="CI status" loading="lazy">
+          <p><b>M0–M6 全部交付</b>；stdlib-only 核心，继承 Troupe.cr 已验证经验。</p>
+          <ul>
+            <li>单机核心 → PG 跨节点接管 → TCP transport 与集群路由</li>
+            <li>持久流 + Reminder + Outbox；交错调度 + Show realtime + Director</li>
+            <li>版本化 directory / placement / rebalancing（M5）</li>
+            <li>OTel 导出适配器、事件溯源、版本兼容矩阵、滚动升级指引（M6）</li>
+            <li>全仓 <code>go test -race</code> 绿（root 84 / transport 11 / PG 8）</li>
+          </ul>
+          <div class="card-links">
+            <a href="https://github.com/ShiningRay/troupe-go/blob/main/DESIGN.md">DESIGN</a>
+            <a href="https://github.com/ShiningRay/troupe-go/blob/main/docs/COMPATIBILITY.md">COMPATIBILITY</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <span class="lang-tag cr">Crystal</span>
+            <h3><a href="https://github.com/ShiningRay/troupe-cr">Troupe.cr</a></h3>
+          </div>
+          <img class="ci-badge" src="https://github.com/ShiningRay/troupe-cr/actions/workflows/ci.yml/badge.svg" alt="CI status" loading="lazy">
+          <p><b>M0–M6 交付</b>；语义与 golden 向量同源的 Crystal 实现。</p>
+          <ul>
+            <li>PostgreSQL PropStore：CAS + fencing，<code>cross_node_safe?</code> 生产 Provider</li>
+            <li>TCP transport 实验与持久流（事件日志/游标/ack/replay/慢消费者）</li>
+            <li>M5：协议 ADR + golden fixtures 契约锚点、版本兼容矩阵、版本化 directory</li>
+            <li>M6：事件溯源扩展点、滚动升级指引、OTLP JSON v1 零依赖 OTel 导出</li>
+          </ul>
+          <div class="card-links">
+            <a href="https://github.com/ShiningRay/troupe-cr/blob/main/DESIGN.md">DESIGN</a>
+            <a href="https://github.com/ShiningRay/troupe-cr/blob/main/PLAN.md">PLAN</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <span class="lang-tag rb">Ruby</span>
+            <h3><a href="https://github.com/ShiningRay/troupe-rb">Troupe.rb</a></h3>
+          </div>
+          <img class="ci-badge" src="https://github.com/ShiningRay/troupe-rb/actions/workflows/ci.yml/badge.svg" alt="CI status" loading="lazy">
+          <p>运行时核心 M1–M4 交付，M5 架构裁决落文档；<b>运行时零第三方 gem 依赖</b>。</p>
+          <ul>
+            <li>Cell 串行、租约 + fencing、Props CAS、持久 Cue、进程内 Show</li>
+            <li>M4：持久流、Outbox（同原子提交 + 独立 dispatcher）、Inbox 去重、事件溯源扩展点</li>
+            <li>M5：ADR-0007 裁决（Booth/BoxOffice 归伴生 troupe-gateway）、滚动升级流程与 R1–R6 兼容清单</li>
+            <li>边界诚实：真实多机接管未验证，见 VERIFICATION「未验证边界」</li>
+          </ul>
+          <div class="card-links">
+            <a href="https://github.com/ShiningRay/troupe-rb/blob/main/docs/ROADMAP.md">ROADMAP</a>
+            <a href="https://github.com/ShiningRay/troupe-rb/blob/main/docs/VERIFICATION.md">VERIFICATION</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <span class="lang-tag ex">Elixir</span>
+            <h3><a href="https://github.com/ShiningRay/troupe-elixir">Troupe.ex</a></h3>
+          </div>
+          <img class="ci-badge" src="https://github.com/ShiningRay/troupe-elixir/actions/workflows/ci.yml/badge.svg" alt="CI status" loading="lazy">
+          <p>BEAM 移植，<b>零第三方依赖</b>、零配置开箱即用；单机核心 37 测试。</p>
+          <ul>
+            <li>GenServer 串行、快照交错；BEAM 天然提供 Node.js 需手工构建的机制</li>
+            <li>File/DETS Props、`:pg` Show、distribution、Director/CLI</li>
+            <li>差距明确：所有权前迁移写、Memory ownership、共享 Props/Cue/fencing 待补</li>
+          </ul>
+          <div class="card-links">
+            <a href="https://github.com/ShiningRay/troupe-elixir/blob/main/docs/ROADMAP.md">ROADMAP</a>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <section id="ecosystem" class="section section-alt">
+      <h2>生态与配套</h2>
+      <div class="cards cards-compact">
+        <article class="card">
+          <h3><a href="https://github.com/ShiningRay/troupe-gateway">troupe-gateway</a></h3>
+          <p>外部端点传输桥（ADR-0007 L3 伴生 shard）：WebSocket 会话、有界 mailbox、Outbox 派发循环、事件去重——core 保持零 HTTP/WS。</p>
+        </article>
+        <article class="card">
+          <h3><a href="https://github.com/ShiningRay/troupe-bench-suite">troupe-bench-suite</a></h3>
+          <p>跨实现统一基准：同一场景与度量口径对比各语言实现（冷激活、驻留、热点、持久写、目录恢复等）。</p>
+        </article>
+        <article class="card">
+          <h3><a href="https://github.com/ShiningRay/coin-rush-servers">coin-rush-client / servers</a></h3>
+          <p>Coin Rush 示范应用：零构建 Canvas 客户端 + 五语言服务器端（TS/Crystal/Ruby/Elixir/Go）实现同一线上协议，作为框架实证消费者。</p>
+        </article>
+        <article class="card">
+          <h3><a href="https://github.com/ShiningRay/troupe-chat">troupe-chat</a></h3>
+          <p>TroupeChat 聊天室：Virtual Actor 房间 + 自绘 GUI，多语言服务端 monorepo，含冒烟与重启恢复验证。</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="principles" class="section">
+      <h2>设计原则</h2>
+      <ol class="principles">
+        <li><b>先正确，后功能</b> — 所有权、fencing、迁移和恢复没有反例验证时，不添加更多分布式模块。</li>
+        <li><b>运行时优势不替代分布式契约</b> — BEAM 进程、Crystal Fiber、Ruby Thread、Node Promise 都不自动等于单激活或容错。</li>
+        <li><b>同一语义，本地 idiomatic API</b> — 不要求各语言语法相同，要求关键行为与错误可验证一致。</li>
+        <li><b>不虚构互操作</b> — 不同 JSON/TCP/Erlang term 不是公共协议；ADR 通过前各自独立部署。</li>
+        <li><b>不承诺 exactly-once</b> — 超时时结果未知，重试依赖幂等；流与副作用分别定义持久化、确认和恢复。</li>
+        <li><b>生产证据必须可复现</b> — CI、真实 Provider、进程/节点拓扑、故障注入和版本矩阵共同构成验收。</li>
+      </ol>
+    </section>
+
+    <section id="docs" class="section section-alt">
+      <h2>架构文档</h2>
+      <div class="doc-grid">
+        <a href="https://github.com/ShiningRay/troupe/blob/main/docs/orleans-baseline.md">Orleans 对标基线</a>
+        <a href="https://github.com/ShiningRay/troupe/blob/main/docs/current-state.md">当前能力与验证快照</a>
+        <a href="https://github.com/ShiningRay/troupe/blob/main/docs/target-architecture.md">目标架构与演进选择</a>
+        <a href="https://github.com/ShiningRay/troupe/blob/main/docs/compatibility.md">共同契约与互操作边界</a>
+        <a href="https://github.com/ShiningRay/troupe/blob/main/docs/roadmap.md">分阶段路线图与验收门禁</a>
+        <a href="https://github.com/ShiningRay/troupe/blob/main/docs/issues.md">Issues 与文档提交索引</a>
+        <a href="https://github.com/ShiningRay/troupe/blob/main/docs/adr/README.md">ADR 索引</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>🎭 Troupe · MIT License · <a href="https://github.com/ShiningRay/troupe">github.com/ShiningRay/troupe</a></p>
+    <p class="footer-note">能力声明以各实现仓库的 CI 与验证文档为准，不以本站表述为准。</p>
+  </footer>
+</body>
+</html>
