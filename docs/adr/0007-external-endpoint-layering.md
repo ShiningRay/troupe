@@ -2,7 +2,7 @@
 
 状态：**Accepted**（2026-11-15）
 实证来源：[troupe-chat](https://github.com/ShiningRay/troupe-chat)（troupe.cr + tessell 聊天室）首个外部消费者网关的完整实现与验证。
-关联：troupe.cr issue [#2](https://github.com/ShiningRay/troupe.cr/issues/2)（OutboxDispatcher 批量/后台派发）。
+关联：troupe.cr issue [#2](https://github.com/ShiningRay/troupe-cr/issues/2)（OutboxDispatcher 批量/后台派发）。
 
 ## 背景
 

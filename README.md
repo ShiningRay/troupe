@@ -6,10 +6,10 @@ Troupe 多语言实现的统一架构与路线图。主要对标 **Orleans 10.0*
 
 | 实现 | 当前定位 | 本地方案 |
 |---|---|---|
-| [troupejs](https://github.com/ShiningRay/troupejs)（私有） | TypeScript 主线，功能面最广 | [差距与路线](https://github.com/ShiningRay/troupejs/blob/main/docs/ROADMAP.md) |
+| [troupejs](https://github.com/ShiningRay/troupe-js)（私有） | TypeScript 主线，功能面最广 | [差距与路线](https://github.com/ShiningRay/troupe-js/blob/main/docs/ROADMAP.md) |
 | [troupe-elixir](https://github.com/ShiningRay/troupe-elixir) | BEAM 单机核心，补生产容错 | [差距与路线](https://github.com/ShiningRay/troupe-elixir/blob/main/docs/ROADMAP.md) |
-| [troupe](https://github.com/ShiningRay/troupe)（Ruby） | 先修测试与存储基线 | [差距与路线](https://github.com/ShiningRay/troupe/blob/main/docs/ROADMAP.md) |
-| [troupe.cr](https://github.com/ShiningRay/troupe.cr) | Crystal 规划与脚手架 | [设计](https://github.com/ShiningRay/troupe.cr/blob/main/DESIGN.md) / [计划](https://github.com/ShiningRay/troupe.cr/blob/main/PLAN.md) |
+| [troupe](https://github.com/ShiningRay/troupe-rb)（Ruby） | 先修测试与存储基线 | [差距与路线](https://github.com/ShiningRay/troupe-rb/blob/main/docs/ROADMAP.md) |
+| [troupe.cr](https://github.com/ShiningRay/troupe-cr) | Crystal 规划与脚手架 | [设计](https://github.com/ShiningRay/troupe-cr/blob/main/DESIGN.md) / [计划](https://github.com/ShiningRay/troupe-cr/blob/main/PLAN.md) |
 | [troupe-gateway](https://github.com/ShiningRay/troupe-gateway) | Crystal 伴生：外部端点传输桥（ADR-0007 L3） | [README](https://github.com/ShiningRay/troupe-gateway#readme) |
 | [coin-rush-client](https://github.com/ShiningRay/coin-rush-client) | Coin Rush 浏览器客户端（零构建 Canvas，可连任意协议实现） | [README](https://github.com/ShiningRay/coin-rush-client#readme) |
 | [coin-rush-servers](https://github.com/ShiningRay/coin-rush-servers) | Coin Rush 服务器端五语言实现：TS/Crystal/Ruby/Elixir/Go | [README](https://github.com/ShiningRay/coin-rush-servers#readme) / [协议](https://github.com/ShiningRay/coin-rush-servers/blob/main/PROTOCOL.md) |
