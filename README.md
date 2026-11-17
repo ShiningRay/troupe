@@ -11,7 +11,8 @@ Troupe 多语言实现的统一架构与路线图。主要对标 **Orleans 10.0*
 | [troupe](https://github.com/ShiningRay/troupe)（Ruby） | 先修测试与存储基线 | [差距与路线](https://github.com/ShiningRay/troupe/blob/main/docs/ROADMAP.md) |
 | [troupe.cr](https://github.com/ShiningRay/troupe.cr) | Crystal 规划与脚手架 | [设计](https://github.com/ShiningRay/troupe.cr/blob/main/DESIGN.md) / [计划](https://github.com/ShiningRay/troupe.cr/blob/main/PLAN.md) |
 | [troupe-gateway](https://github.com/ShiningRay/troupe-gateway) | Crystal 伴生：外部端点传输桥（ADR-0007 L3） | [README](https://github.com/ShiningRay/troupe-gateway#readme) |
-| [troupe-game-demo](https://github.com/ShiningRay/troupe-game-demo) | TS 示范应用：Coin Rush 多人竞技场（每房间一个 Actor） | [README](https://github.com/ShiningRay/troupe-game-demo#readme) |
+| [coin-rush-client](https://github.com/ShiningRay/coin-rush-client) | Coin Rush 浏览器客户端（零构建 Canvas，可连任意协议实现） | [README](https://github.com/ShiningRay/coin-rush-client#readme) |
+| [coin-rush-servers](https://github.com/ShiningRay/coin-rush-servers) | Coin Rush 服务器端五语言实现：TS/Crystal/Ruby/Elixir/Go | [README](https://github.com/ShiningRay/coin-rush-servers#readme) / [协议](https://github.com/ShiningRay/coin-rush-servers/blob/main/PROTOCOL.md) |
 | [troupe-bench-suite](https://github.com/ShiningRay/troupe-bench-suite) | 跨实现统一基准 | 场景与结果需版本化复核 |
 
 ## 文档
